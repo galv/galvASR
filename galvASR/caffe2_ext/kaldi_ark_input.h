@@ -16,6 +16,7 @@
 #pragma once
 
 #include "caffe2/core/context.h"
+#include "caffe2/core/logging.h"
 #include "caffe2/core/operator.h"
 #include "caffe2/operators/prefetch_op.h"
 
@@ -53,10 +54,10 @@ struct KaldiToCaffe2Type<kaldi::Vector<float>, Context> {
 
 }
 
-template <typename Holder, typename Context>
+template <typename Holder, typename Context> //, typename = typename std::enable_if<true>::type>
 class KaldiArkInputOp final : public PrefetchOperator<Context> {
  public:
-  // USE_OPERATOR_CONTEXT_FUNCTIONS;
+  using KaldiType = typename Holder::T;
   bool Prefetch() override;
   bool CopyPrefetched() override;
   explicit KaldiArkInputOp(const OperatorDef& operator_def, Workspace* ws);
@@ -66,7 +67,7 @@ class KaldiArkInputOp final : public PrefetchOperator<Context> {
  private:
   kaldi::SequentialTableReader<Holder> reader_;
   std::size_t batch_size_;
-  std::vector<typename Holder::T> prefetched_data_;
+  std::vector<KaldiType> prefetched_data_;
   std::vector<std::string> prefetched_data_keys_;
 
   INPUT_TAGS(R_SPECIFIER);
@@ -79,11 +80,14 @@ KaldiArkInputOp<Holder, Context>::KaldiArkInputOp(const OperatorDef& operator_de
     reader_(OperatorBase::Input<std::string>(R_SPECIFIER)),
     OP_SINGLE_ARG(int, "batch_size", batch_size_, 1),
     prefetched_data_(batch_size_),
-    prefetched_data_keys_(batch_size_) { }
+    prefetched_data_keys_(batch_size_) {
+  // TODO: How to set OutputSize() equal to batch_size_?
+}
 
 template <typename Holder, typename Context>
 bool KaldiArkInputOp<Holder, Context>::Prefetch() {
-  for (std::size_t i = 0; i < batch_size_ && !reader_.Done(); ++i, reader_.Next()) {
+  std::size_t i;
+  for (i = 0; i < batch_size_ && !reader_.Done(); ++i, reader_.Next()) {
     prefetched_data_[i] = reader_.Value();
     prefetched_data_keys_[i] = reader_.Key();
   }
@@ -96,19 +100,34 @@ bool KaldiArkInputOp<Holder, Context>::Prefetch() {
 }
 
 template <typename Holder, typename Context>
+template <typename = typename std::enable_if<std::is_same<typename Holder::T, kaldi::Matrix<float>>::value>::type>
 bool KaldiArkInputOp<Holder, Context>::CopyPrefetched() {
-  using C2T = typename KaldiToCaffe2Type<typename Holder::T, Context>::T;
-  using ContainedType = typename KaldiToCaffe2Type<typename Holder::T, Context>::ContainedType;
+  using C2T = typename KaldiToCaffe2Type<KaldiType, Context>::T;
+  using ContainedType = typename KaldiToCaffe2Type<KaldiType, Context>::ContainedType;
 
   for (std::size_t i = 0; i < OperatorBase::OutputSize(); ++i) {
-    const std::vector<TIndex> dims = {prefetched_data_[i].NumRows(), prefetched_data_[i].NumCols()};
-    C2T *tensor_to_fill = OperatorBase::Output<C2T>(i);
+    KaldiType& data = prefetched_data_[i];
+    // Remove any padding in the rows of the matrix, since Caffe2
+    // tensors have no padding!
+    data.Resize(data.NumRows(), data.NumCols(), kaldi::kCopyData,
+		kaldi::kStrideEqualNumCols);
+    CAFFE_ENFORCE_EQ(data.NumCols(), data.Stride(),
+		     "Implementation error in kaldi::Matrix::Resize");
+    const std::vector<TIndex> dims = {data.NumRows(), data.NumCols()};
+    C2T *tensor_to_fill = OperatorBase::Output<C2T>(0);
     tensor_to_fill->Resize(dims);
     this->context_.template Copy<ContainedType, CPUContext, Context>(
-     tensor_to_fill->size(), prefetched_data_[i].Data(),
-     tensor_to_fill->template mutable_data<ContainedType>());
+      tensor_to_fill->size(), data.Data(),
+      tensor_to_fill->template mutable_data<ContainedType>());
   }
   return true;
 }
+
+// template <typename Holder, typename Context,
+// 	  typename = typename std::enable_if<std::is_fundamental<typename Holder::T>::value>::type>
+// bool KaldiArkInputOp<Holder, Context>::CopyPrefetched() {
+//   CAFFE_ENFORCE_EQ(true, false);
+//   return true;
+// }
 
 } // namespace galvASR

@@ -25,8 +25,10 @@ CAFFE2_MODULE(kaldi_ark_input, "Read data in from Kaldi archives")
 // Do we need to be in the caffe2 namespace to use this? That would be troublesome!
 REGISTER_CPU_OPERATOR(KaldiFloatMatrixArchiveInput,
                       KaldiArkInputOp<kaldi::KaldiObjectHolder<kaldi::Matrix<float>>, CPUContext>);
-REGISTER_CPU_OPERATOR(KaldiFloatVectorArchiveInput,
-                      KaldiArkInputOp<kaldi::Vector<float>, CPUContext>);
+SHOULD_NOT_DO_GRADIENT(KaldiFloatMatrixArchiveInput);
+// REGISTER_CPU_OPERATOR(KaldiFloatVectorArchiveInput,
+//                       KaldiArkInputOp<kaldi::KaldiObjectHolder<kaldi::Vector<float>>, CPUContext>);
+// SHOULD_NOT_DO_GRADIENT(KaldiFloatVectorArchiveInput);
 // REGISTER_CPU_OPERATOR(KaldiDoubleMatrixArchiveInput,
 //                       KaldiArkInputOp<kaldi::Matrix<double>, CPUContext>);
 // REGISTER_CPU_OPERATOR(KaldiDoubleVectorArchiveInput,
@@ -36,13 +38,10 @@ REGISTER_CPU_OPERATOR(KaldiFloatVectorArchiveInput,
 // REGISTER_CPU_OPERATOR(KaldiDoubleVectorArchiveInput,
 //                       KaldiArkInputOp<kaldi::Vector<double>, CPUContext>);
 
-// TODO: Replace this. A lot.
-SHOULD_NOT_DO_GRADIENT(KaldiFloatMatrixArchiveInput);
-
 // Documentation will be nearly the same among all of these. Ugh! So ugly!
 OPERATOR_SCHEMA(KaldiFloatMatrixArchiveInput)
   .NumInputs(1)
-  .NumOutputs(1, INT_MAX)
+  .NumOutputs(1)
   .Arg("batch_size", "(int, default 1)");
 // OPERATOR_SCHEMA(KaldiFloatVectorArchiveInput);
 // OPERATOR_SCHEMA(KaldiDoubleMatrixArchiveInput);
