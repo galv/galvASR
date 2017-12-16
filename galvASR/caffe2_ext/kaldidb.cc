@@ -16,6 +16,7 @@
 
 namespace galvASR {
 
+namespace {
 // These are required to get the below macro expansions to compile happily.
 using namespace caffe2;
 using namespace caffe2::db;
@@ -36,5 +37,6 @@ REGISTER_CAFFE2_DB(KaldiInt32DB,
 
 // REGISTER_CAFFE2_DB(KaldiChainSupervisionDB,
 //                    KaldiDB<kaldi::KaldiObjectHolder<kaldi::chain::Supervision>>);
+} // namespace
 
 } // namespace galvASR

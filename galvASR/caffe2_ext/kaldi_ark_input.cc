@@ -19,7 +19,7 @@
 #include "kaldi_ark_input.h"
 
 namespace galvASR {
-
+namespace {
 CAFFE2_MODULE(kaldi_ark_input, "Read data in from Kaldi archives")
 
 // Do we need to be in the caffe2 namespace to use this? That would be troublesome!
@@ -75,5 +75,5 @@ OPERATOR_SCHEMA(KaldiFloatVectorArchiveInput)
 //                       KaldiArkInputOp<std::vector<std::vector<int>>, CPUContext>);
 // REGISTER_CPU_OPERATOR(KaldiIntPairVectorArchiveInput,
 //                       KaldiArkInputOp<std::vector<std::pair<int,int>>, CPUContext>);
-
-}
+} // namespace
+} // namespace galvASR

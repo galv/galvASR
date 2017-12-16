@@ -3,6 +3,8 @@
 #include <sstream>
 
 #include "caffe2/core/db.h"
+#include "caffe2/proto/caffe2.pb.h"
+
 #include "kaldi/src/util/kaldi-holder.h"
 #include "kaldi/src/util/kaldi-table.h"
 
@@ -20,6 +22,7 @@ class KaldiDBCursor final : public caffe2::db::Cursor {
   void Seek(const std::string& key) override {
     throw std::logic_error("Seek not supported.");
   }
+  // Note: We could support seek() if we used a RandomAccessTableReader
   bool SupportsSeek() override { return false; }
   void SeekToFirst() override { CHECK(reader_.Close());
     throw std::logic_error("Figure out later");
@@ -30,10 +33,16 @@ class KaldiDBCursor final : public caffe2::db::Cursor {
   std::string value() override {
     std::stringstream str_stream;
     const typename Holder::T &value = reader_.Value();
+    value.Resize(value.NumRows(), value.NumCols(), kaldi::kCopyData,
+                 kaldi::kStrideEqualNumCols);
     // TODO: Infer true or false-ness of binary mode from the
     // rspecifier and wspecifier
-    holder_.Write(str_stream, true, value);
-    return str_stream.str();
+    TensorSerializer serializer;
+    caffe2::Tensor<CPUContext> tensor;
+    tensor.Resize({value.NumRows(), value.NumCols()});
+    caffe2::TensorProto proto;
+    protos.add_protos();
+    protos.mutable_protos(0)
   }
   bool Valid() override { return ! reader_.Done(); }
 
