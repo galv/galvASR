@@ -1,0 +1,7 @@
+The purpose of the strange kaldi/kaldi directory is so that we can
+prefix our #include's in C++ code with a "namespace" suggesting to
+clearly document that we are including files from kaldi.
+
+i.e., we can do #include "kaldi/src/matrix/matrix-lib.h" instead of
+just #include "matrix/matrix-lib.h", which doesn't signal to the
+reader that Kaldi code is being included.
