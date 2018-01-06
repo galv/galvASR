@@ -14,10 +14,10 @@ namespace galvASR {
 // archive because Caffe2 does not make it the cursor's responsibility
 // to deserialize.
 template<typename Holder>
-class KaldiDBCursor final : public caffe2::db::Cursor {
+class KaldMatrixiDBCursor final : public caffe2::db::Cursor {
  public:
-  explicit KaldiDBCursor(std::string r_specifier): reader_(r_specifier) {}
-  ~KaldiDBCursor() override { CHECK(reader_.Close()); }
+  explicit KaldiMatrixDBCursor(std::string r_specifier): reader_(r_specifier) {}
+  ~KaldiMatrixDBCursor() override { CHECK(reader_.Close()); }
 
   void Seek(const std::string& key) override {
     throw std::logic_error("Seek not supported.");
@@ -39,9 +39,10 @@ class KaldiDBCursor final : public caffe2::db::Cursor {
     // rspecifier and wspecifier
     TensorSerializer serializer;
     caffe2::Tensor<CPUContext> tensor;
-    tensor.Resize({value.NumRows(), value.NumCols()});
-    caffe2::TensorProto proto;
-    protos.add_protos();
+    tensor.Resize(value.NumRows(), value.NumCols());
+    tensor.ShareExternalPointer(value.Data());
+    caffe2::TensorProtos protos;
+    protos.add_protos()->;
     protos.mutable_protos(0)
   }
   bool Valid() override { return ! reader_.Done(); }
@@ -52,11 +53,11 @@ class KaldiDBCursor final : public caffe2::db::Cursor {
 };
 
 template<typename Holder>
-class KaldiDBTransaction final : public caffe2::db::Transaction {
+class KaldiMatrixDBTransaction final : public caffe2::db::Transaction {
  public:
-  KaldiDBTransaction(const std::string& w_specifier)
+  KaldiMatrixDBTransaction(const std::string& w_specifier)
     : writer_(w_specifier) { }
-  ~KaldiDBTransaction() override { }
+  ~KaldiMatrixDBTransaction() override { }
   /**
    * Puts the key value pair to the database.
    */
@@ -78,10 +79,10 @@ class KaldiDBTransaction final : public caffe2::db::Transaction {
 };
 
 template<typename Holder>
-class KaldiDB final : public caffe2::db::DB {
+class KaldiMatrixDB final : public caffe2::db::DB {
  public:
-  KaldiDB(const std::string& ark_specifier, caffe2::db::Mode mode);
-  ~KaldiDB() override;
+  KaldiMatrixDB(const std::string& ark_specifier, caffe2::db::Mode mode);
+  ~KaldiMatrixDB() override;
 
   void Close() override;
   std::unique_ptr<caffe2::db::Cursor> NewCursor() override;
@@ -91,36 +92,40 @@ class KaldiDB final : public caffe2::db::DB {
 };
 
 template<typename Holder>
-KaldiDB<Holder>::KaldiDB(const std::string& ark_specifier, caffe2::db::Mode mode)
+KaldiMatrixDB<Holder>::KaldiMatrixDB(const std::string& ark_specifier, caffe2::db::Mode mode)
   : caffe2::db::DB(ark_specifier, mode),
     ark_specifier_(ark_specifier) { }
 
 template<typename Holder>
-KaldiDB<Holder>::~KaldiDB() { }
+KaldiMatrixDB<Holder>::~KaldiMatrixDB() { }
 
 template<typename Holder>
-void KaldiDB<Holder>::Close() { }
+void KaldiMatrixDB<Holder>::Close() { }
 
 template<typename Holder>
-std::unique_ptr<caffe2::db::Cursor> KaldiDB<Holder>::NewCursor() {
+std::unique_ptr<caffe2::db::Cursor> KaldiMatrixDB<Holder>::NewCursor() {
   if(mode_ != caffe2::db::READ) {
     auto message = "READ mode required to create a cursor.";
     throw std::invalid_argument(message);
   }
-  std::unique_ptr<caffe2::db::Cursor> ptr(new KaldiDBCursor<Holder>(ark_specifier_));
+  std::unique_ptr<caffe2::db::Cursor> ptr(new KaldiMatrixDBCursor<Holder>(ark_specifier_));
   return ptr;
 }
 
 template<typename Holder>
-std::unique_ptr<caffe2::db::Transaction> KaldiDB<Holder>::NewTransaction() {
+std::unique_ptr<caffe2::db::Transaction> KaldiMatrixDB<Holder>::NewTransaction() {
   // TODO: Can you write to an existing Kaldi table?
   if(mode_ != caffe2::db::NEW) {
     auto message = "NEW mode required to create a transaction.";
     throw std::invalid_argument(message);
   }
   std::unique_ptr<caffe2::db::Transaction>
-    ptr(new KaldiDBTransaction<Holder>(ark_specifier_));
+    ptr(new KaldiMatrixDBTransaction<Holder>(ark_specifier_));
   return ptr;
 }
+
+
+
+
 
 } // namespace galvASR

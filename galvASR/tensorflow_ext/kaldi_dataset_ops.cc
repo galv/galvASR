@@ -1,35 +1,59 @@
-namespace {
+#include "tensorflow/core/kernels/dataset.h"
+#include "tensorflow/core/framework/partial_tensor_shape.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/framework/common_shape_fns.h"
+
+//#include "kaldi/src/matrix/matrix-lib.h"
+#include "kaldi/src/util/kaldi-holder.h"
+#include "kaldi/src/util/kaldi-table.h"
+
+#include <array>
+
+namespace galvASR { namespace tensorflow_ext {
 
 using namespace tensorflow;
 
-template<typename Holder>
-class KaldiTableDatasetOp : public DatasetOpKernel(ctx) {
+// Use a macro to register ops for the different kinds of tables.
+
+REGISTER_OP("KaldiTableDataset")
+  .Input("r_specifier: string")
+  .Output("handle: variant")
+  .SetIsStateful()
+  .SetShapeFn(shape_inference::ScalarShape)
+  .Doc("doc(blah)doc");
+
+// KALDI_ASSERT, KALDI_ERROR, and so on throw std::runtime_error.
+using kaldi_error = std::runtime_error;
+
+enum class KaldiType;
+
+template<class Holder>
+struct TFData;
+
+Tensor getValueAsTensor(void *value, KaldiType type);
+
+template<class Holder>
+class KaldiTableDatasetOp : public DatasetOpKernel {
  public:
-  explicit KaldiDatasetOp(OpKernelConstruction* ctx) : DatasetOpKernel(ctx) {
-    OP_REQUIRES_OK(ctx, ctx->GetAttr("output_types", &output_types_));
-    OP_REQUIRES_OK(ctx, ctx->GetAttr("output_shapes", &output_shapes_));
-    for (const DataType& dt : output_types_) {
-      OP_REQUIRES(ctx,
-                  dt == DT_STRING || dt == DT_BOOL || 
-                  dt == DT_INT32 || dt == DT_INT64 ||
-                  dt == DT_FLOAT || dt == DT_DOUBLE,
-                  errors::InvalidArgument(
-                    "Each element of `output_types_` must be one of: "
-                    "DT_STRING, DT_BOOL, DT_INT32, DT_INT64, "
-                    "DT_FLOAT, or DT_DOUBLE"));
-    }
-  }
+//  using DatasetOpKernel::DatasetOpKernel;
+  explicit KaldiTableDatasetOp(OpKernelConstruction* ctx) : DatasetOpKernel(ctx) { }
 
   void MakeDataset(OpKernelContext* ctx, DatasetBase** output) override {
-    *output = new Dataset()
+    const Tensor* r_specifier_tensor;
+    OP_REQUIRES_OK(ctx, ctx->input("r_specifier", &r_specifier_tensor));
+    OP_REQUIRES(ctx, r_specifier_tensor->dims() == 0 &&
+                r_specifier_tensor->NumElements() == 1,
+                errors::InvalidArgument("May not specify more than one r_specifier"));
+    std::string r_specifier(r_specifier_tensor->flat<std::string>()(0));
+    *output = new Dataset(r_specifier);
   }
 
  private:
   class Dataset : public DatasetBase {
    public:
-    Dataset(const string& r_specifier, const DataTypeVector& output_types,
-            const std::vector<PartialTensorShape>& output_shapes)
-      : r_specifier_(r_specifier)
+    Dataset(const string& r_specifier)
+      : r_specifier_(r_specifier),
+        output_shapes_({PartialTensorShape(gtl::ArraySlice<tensorflow::int64>({-1, -1}/*aTFData<Holder>::shape*/))}) { }
 
     std::unique_ptr<IteratorBase> MakeIterator(
         const string& prefix) const override {
@@ -38,24 +62,35 @@ class KaldiTableDatasetOp : public DatasetOpKernel(ctx) {
     }
 
     const DataTypeVector& output_dtypes() const override {
-      return output_types_;
+      static DataTypeVector* dtypes = new DataTypeVector({TFData<Holder>::dt});
+      return *dtypes;
     }
 
     const std::vector<PartialTensorShape>& output_shapes() const override {
       return output_shapes_;
+      // static std::vector<PartialTensorShape>* shapes = new std::vector<PartialTensorShape>({PartialTensorShape(gtl::ArraySlice<tensorflow::int64>(TFData<Holder>::shape))});
+      // return *shapes;
     }
 
-    string DebugString() override { return "KaldiTableDatasetOp::Dataset"; }  
+    string DebugString() override { return "KaldiTableDatasetOp::Dataset"; }
+
+   private:
+    std::string r_specifier_;
+    std::vector<PartialTensorShape> output_shapes_;
 
    private:
     class Iterator : public DatasetIterator<Dataset> {
+      // There must be a better way to be able to access the Params type...
+      typedef typename tensorflow::DatasetIterator<KaldiTableDatasetOp<Holder>::Dataset>::Params
+      MyParams;
+
      public:
-      explicit Iterator(const Params& params)
+      explicit Iterator(const MyParams& params)
         : DatasetIterator<Dataset>(params) {}
       ~Iterator() override {
         if (reader_initialized_) {
           bool failure_occurred = reader_.Close();
-          LOG(ERROR) << dataset()->r_specifier_ <<
+          LOG(ERROR) << this->dataset()->r_specifier_ <<
             " done early because of an error";
         }
       }
@@ -65,9 +100,9 @@ class KaldiTableDatasetOp : public DatasetOpKernel(ctx) {
                              bool* end_of_sequence) override {
         mutex_lock l(mu_);
         if (!reader_initialized_) {
-          if (!reader_.Open(dataset()->r_specifier_)) {
-            std::strinstream sstr;
-            sstr << "Failed to open: " << dataset()->r_specifier_;
+          if (!reader_.Open(this->dataset()->r_specifier_)) {
+            std::stringstream sstr;
+            sstr << "Failed to open: " << this->dataset()->r_specifier_;
             LOG(ERROR) << sstr.str();
             return Status(error::NOT_FOUND, sstr.str());
           }
@@ -75,11 +110,12 @@ class KaldiTableDatasetOp : public DatasetOpKernel(ctx) {
         }
 
         try {
-          out_tensors[0] = std::move(getValueAsTensor(&reader_.Value()));
-        } catch (const std::runtime_exception& exception) {
-          std::strinstream sstr;
+          out_tensors->operator[](0) =
+            std::move(getValueAsTensor(&reader_.Value(), TFData<Holder>::type));
+        } catch (const kaldi_error& exception) {
+          std::stringstream sstr;
           sstr << "Failed to read " << reader_.Key() << " in: " <<
-            dataset()->r_specifier_;
+            this->dataset()->r_specifier_;
           return Status(error::NOT_FOUND, sstr.str());
         }
         reader_.Next();
@@ -89,7 +125,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel(ctx) {
 
 
      private:
-      mutext mu_;
+      mutex mu_;
       kaldi::SequentialTableReader<Holder> reader_ GUARDED_BY(mu_);
       bool reader_initialized_ GUARDED_BY(mu_) = false;
     };
@@ -97,51 +133,88 @@ class KaldiTableDatasetOp : public DatasetOpKernel(ctx) {
 };
 
 enum class KaldiType {
-  FloatMatrix;
-  FloatVector;
-  Int32Vector;
+  FloatMatrix,
+  FloatVector,
+  Int32Vector
 };
 
-template<typename Holder>
-struct HolderToEnum {
-
-};
-
-template<>
-struct HolderToEnum<KaldiObjectHolder<kaldi::Matrix<float>>> {
+template<class Holder>
+struct TFData {
   static constexpr KaldiType type = KaldiType::FloatMatrix;
+  static constexpr DataType dt = DT_FLOAT;
+  static constexpr std::array<tensorflow::int64, 0> shape{};
 };
 
 template<>
-struct HolderToEnum<KaldiObjectHolder<kaldi::Vector<float>>> {
+struct TFData<kaldi::KaldiObjectHolder<kaldi::Matrix<kaldi::float32>>> {
+  static constexpr KaldiType type = KaldiType::FloatMatrix;
+  static constexpr DataType dt = DT_FLOAT;
+  static constexpr std::array<tensorflow::int64, 2> shape{{-1, -1}};
+};
+
+template<>
+struct TFData<kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>> {
   static constexpr KaldiType type = KaldiType::FloatVector;
+  static constexpr DataType dt = DT_FLOAT;
+  static constexpr std::array<tensorflow::int64, 1> shape = {-1};
 };
 
 template<>
-struct HolderToEnum<KaldiObjectHolder<std::vector<int32>>> {
+struct TFData<kaldi::BasicVectorHolder<kaldi::int32>> {
   static constexpr KaldiType type = KaldiType::Int32Vector;
+  static constexpr DataType dt = DT_INT32;
+  static constexpr std::array<tensorflow::int64, 1> shape = {-1};
 };
 
-Tensor getValueAsTensor(void *value, KaldiType type)
-  switch type {
-    case KaldiType::FloatMatrix:
-      kaldi::Matrix<float>& matrix = *value;
+Tensor getValueAsTensor(void *value, KaldiType type) {
+  switch (type) {
+    case KaldiType::FloatMatrix: {
+      kaldi::Matrix<float>& matrix = *static_cast<kaldi::Matrix<float>*>(value);
       matrix.Resize(matrix.NumRows(), matrix.NumCols(), kaldi::kCopyData,
                     kaldi::kStrideEqualNumCols);
       Tensor tensor(DT_FLOAT, TensorShape({matrix.NumRows(), matrix.NumCols()}));
-      Tensor flat = tensor->flat<float>();
+      auto flat = tensor.flat<float>();
       std::copy_n(matrix.Data(), matrix.NumRows() * matrix.NumCols(),
                   flat.data());
       return tensor;
-    case KaldiType::FloatVector:
-      kaldi::Vector<float>& vector = *value;
+    }
+    case KaldiType::FloatVector: {
+      kaldi::Vector<float>& vector = *static_cast<kaldi::Vector<float>*>(value);
       Tensor tensor(DT_FLOAT, TensorShape({vector.Dim()}));
-      std::copy_n(vector.Data(), vector.Dim(), tensor.data());
+      auto flat = tensor.flat<float>();
+      std::copy_n(vector.Data(), vector.Dim(), flat.data());
       return tensor;
-    case KaldiType::Int32Vector:
-      std::vector<int32>& vector = *value;
-      Tensor tensor(DT_INT32, TensorShape({vector.size()}));
-      std::copy_n(vector.data(), vector.size(), tensor.data());
+    }
+    case KaldiType::Int32Vector: {
+      std::vector<kaldi::int32>& vector =
+        *static_cast<std::vector<kaldi::int32>*>(value);
+      // Use tensorflow:: prefix because kaldi and openfst also define
+      // their own int64's.
+      tensorflow::int64 size = vector.size();
+      Tensor tensor(DT_INT32, TensorShape({size}));
+      auto flat = tensor.flat<kaldi::int32>();
+      std::copy_n(vector.data(), vector.size(), flat.data());
       return tensor;
+    }
   }
 }
+
+REGISTER_KERNEL_BUILDER(
+  Name("KaldiTableDataset")
+  .Device(DEVICE_CPU),
+  KaldiTableDatasetOp<kaldi::KaldiObjectHolder<kaldi::Matrix<kaldi::float32>>>);
+
+// REGISTER_KERNEL_BUILDER(
+//   Name("KaldiFloatVectorTableDatasetOp")
+//   .Device(DEVICE_CPU),
+// //  .TypeConstraint<kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>>("Holder"),
+//   KaldiTableDatasetOp<kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>>);
+
+// REGISTER_KERNEL_BUILDER(
+//   Name("KaldiInt32VectorTableDatasetOp")
+//   .Device(DEVICE_CPU)
+// //  .TypeConstraint<kaldi::BasicVectorHolder<kaldi::int32>>("Holder"),
+//   KaldiTableDatasetOp<kaldi::BasicVectorHolder<kaldi::int32>>);
+
+} // namespace tensorflow_ext
+} // namespace galvASR

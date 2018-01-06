@@ -22,7 +22,10 @@ using namespace caffe2;
 using namespace caffe2::db;
 
 REGISTER_CAFFE2_DB(KaldiFloatMatrixDB,
-                   KaldiDB<kaldi::KaldiObjectHolder<kaldi::Matrix<float>>>);
+                   KaldiMatrixDB<kaldi::KaldiObjectHolder<kaldi::Matrix<float>>>);
+// This probably won't be necessary:
+// REGISTER_CAFFE2_DB(KaldiDoubleMatrixDB,
+//                    KaldiMatrixDB<kaldi::KaldiObjectHolder<kaldi::Matrix<double>>>);
 REGISTER_CAFFE2_DB(KaldiFloatVectorDB,
                    KaldiDB<kaldi::KaldiObjectHolder<kaldi::Vector<float>>>);
 

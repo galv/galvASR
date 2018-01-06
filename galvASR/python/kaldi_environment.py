@@ -5,11 +5,35 @@ from __future__ import unicode_literals
 
 from contextlib import contextmanager
 import logging
+from multiprocessing import cpu_count
 import os
+import re
 
 log = logging.getLogger('galvASR')
 
 GALVASR_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+
+def _parse_tools_env_sh_if_exists(env_sh_file_name):
+    """
+    ${KALDI_ROOT}/tools/env.sh has contents that we can't generally predict
+
+    Mutates os.environ
+    """
+    export_regex = r'^export ([a-zA-Z0-9_]+)=([a-zA-Z0-9_/{}]*)$'
+    if not os.path.exists(env_sh_file_name):
+        return
+    with open(env_sh_file_name) as env_sh_fh:
+        for line in env_sh_fh:
+            if line.strip() == '':
+                continue
+            match = re.search(export_regex)
+            if match:
+                env_var = match.group(1)
+                expression = match.group(2).replace('$', '')
+                os.environ[env_var] = expression.format(**os.environ)
+            else:
+                logging.warn('Unknown line in tools/env.sh: {0}'.format(line))
 
 
 def setup_environment():
@@ -29,6 +53,9 @@ def setup_environment():
         if not os.path.isabs(os.environ[env_variable]):
             raise ValueError('{0} is not an absolute path. Instead, {1}'.
                              format(env_variable, os.environ[env_variable]))
+
+    env_sh = os.path.join(os.environ['KALDI_ROOT'], 'tools/env.sh')
+    _parse_tools_env_sh_if_exists(env_sh)
 
     # This is a modified copy-pasta of
     # $KALDI_ROOT/tools/config/common_path.sh
@@ -65,17 +92,21 @@ def setup_environment():
 
     # Normally the contents of cmd.sh. May want to make these
     # configurable at some point.
-    os.environ['train_cmd'] = 'run.pl'
-    os.environ['decode_cmd'] = 'run.pl'
+    #  len(os.sched_getaffinity(0)) is python 3.3+ only
+    max_cpus = cpu_count()
+    max_jobs_run = max_cpus - 1 if max_cpus > 1 else max_cpus
+    os.environ['train_cmd'] = 'run.pl --max-jobs-run {0}'.format(max_jobs_run)
+    os.environ['decode_cmd'] = 'run.pl --max-jobs-run {0}'.format(max_jobs_run)
 
 
 @contextmanager
-def kaldi_load_utils_and_steps():
+def load_utils_and_steps():
     save_cwd = os.getcwd()
     steps = os.path.join(save_cwd, 'steps')
     utils = os.path.join(save_cwd, 'utils')
     path_sh = os.path.join(save_cwd, 'path.sh')
     cmd_sh = os.path.join(save_cwd, 'cmd.sh')
+
     # While this should catch exceptions, and clean up the symlinks,
     # there is a small chance that python will be killed (e.g., kill
     # -9) without the exit portion of this function running, so don't
@@ -103,3 +134,19 @@ def kaldi_load_utils_and_steps():
         os.remove(utils)
         os.remove(path_sh)
         os.remove(cmd_sh)
+
+
+@contextmanager
+def load_local(recipe_dir):
+    local_to_load = os.path.join(recipe_dir, 'local')
+    conf_to_load = os.path.join(recipe_dir, 'conf')
+    save_cwd = os.getcwd()
+    local_link = os.path.join(save_cwd, 'local')
+    conf_link = os.path.join(save_cwd, 'conf')
+    os.symlink(local_to_load, local_link)
+    os.symlink(conf_to_load, conf_link)
+    try:
+        yield
+    finally:
+        os.remove(local_link)
+        os.remove(conf_link)

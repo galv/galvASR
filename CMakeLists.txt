@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 project(galvASR CXX C)
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
+
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # Add this back when we're ready for it, and when we can guarantee
 # that it'll use the same python install that caffe2 uses.
