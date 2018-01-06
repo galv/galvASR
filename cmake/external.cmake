@@ -124,19 +124,15 @@ if(USE_TENSORFLOW)
                       # hard-coding it!
                       INSTALL_COMMAND ${PYTHON_EXECUTABLE} -m pip install ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg/tensorflow-1.4.1-cp35-cp35m-linux_x86_64.whl)
 
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(tf.sysconfig.get_include(), end='')" OUTPUT_VARIABLE TF_INC)
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tensorflow as tf; print(tf.sysconfig.get_lib(), end='')" OUTPUT_VARIABLE TF_LIB)
-
-  # set(TENSORFLOW_INCLUDE_DIRS ${TF_INC} ${TF_INC}/external/nsync/public)
-  set(TENSORFLOW_INCLUDE_DIRS ${tensorflow_PREFIX} ${TF_INC}
-    ${TF_INC}/external/nsync/public
+  set(TENSORFLOW_INCLUDE_DIRS ${tensorflow_PREFIX}
     ${tensorflow_PREFIX}/bazel-genfiles
+    ${tensorflow_PREFIX}/bazel-tensorflow/external/nsync/public
+    ${tensorflow_PREFIX}/bazel-tensorflow/external/eigen_archive
     ${tensorflow_PREFIX}/bazel-tensorflow/external/protobuf_archive/src)
   set(TENSORFLOW_LIBRARIES
 #    ${tensorflow_PREFIX}/bazel-out/local_linux-py3-opt/bin/tensorflow/libtensorflow.so
     ${tensorflow_PREFIX}/bazel-bin/tensorflow/libtensorflow_cc.so
 #    ${tensorflow_PREFIX}/bazel-bin/tensorflow/libtensorflow_cc.so
-#    ${TF_LIB}/libtensorflow_framework.so
 )
                     
 endif(USE_TENSORFLOW)
