@@ -1,4 +1,4 @@
-# galvASR: Daniel __Galv__ez's __A__utomatic __S__peech __R__ecognition
+# galvASR: Daniel Galvez's Automatic Speech Recognition
 
 ## Warning
 
