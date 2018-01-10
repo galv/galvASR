@@ -28,16 +28,25 @@ find_package(CuDNN 7.0)
 ExternalProject_Add(kaldi
   SOURCE_DIR ${kaldi_PREFIX}/kaldi/src
   BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND $(MAKE)  -C ../tools/
+  # CONFIGURE_COMMAND ""
   # TODO: Want to make configure arguments more customizable somehow,
   # at some point.
-  COMMAND ./configure --shared
-  COMMAND $(MAKE) clean
+  CONFIGURE_COMMAND ./configure --shared
+  BUILD_COMMAND $(MAKE) clean
   COMMAND $(MAKE) depend
   COMMAND $(MAKE)
   COMMAND $(MAKE) biglib
   INSTALL_COMMAND "")
+
+ExternalProject_Add_Step(kaldi install_tools
+  WORKING_DIRECTORY ${kaldi_PREFIX}/kaldi/tools
+  # Trying adding CXX="-fPIC" and
+  # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
+  COMMAND make
+  COMMAND extras/install_irstlm.sh
+  COMMAND extras/install_pocolm.sh
+  DEPENDERS configure
+  )
 
 set(OPENFST_FOUND TRUE)
 set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
@@ -110,7 +119,7 @@ if(USE_TENSORFLOW)
                       CUDNN_INSTALL_PATH=${CUDNN_LIBRARIES}
                       TF_CUDA_CONFIG_REPO=""
                       # TODO: Make these the same as the compute
-                      # capabilities using in Kaldi install
+                      # capabilities used in Kaldi install
                       TF_CUDA_COMPUTE_CAPABILITIES=3.0,5.0,6.0
                       CC_OPT_FLAGS="-march=native"
                       TF_SET_ANDROID_WORKSPACE=""
