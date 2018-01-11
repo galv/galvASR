@@ -3,7 +3,6 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/common_shape_fns.h"
 
-//#include "kaldi/src/matrix/matrix-lib.h"
 #include "kaldi/src/util/kaldi-holder.h"
 #include "kaldi/src/util/kaldi-table.h"
 
@@ -12,15 +11,6 @@
 namespace galvASR { namespace tensorflow_ext {
 
 using namespace tensorflow;
-
-// Use a macro to register ops for the different kinds of tables.
-
-REGISTER_OP("KaldiTableDataset")
-  .Input("r_specifier: string")
-  .Output("handle: variant")
-  .SetIsStateful()
-  .SetShapeFn(shape_inference::ScalarShape)
-  .Doc("doc(blah)doc");
 
 // KALDI_ASSERT, KALDI_ERROR, and so on throw std::runtime_error.
 using kaldi_error = std::runtime_error;
@@ -52,8 +42,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
   class Dataset : public DatasetBase {
    public:
     Dataset(const string& r_specifier)
-      : r_specifier_(r_specifier),
-        output_shapes_({PartialTensorShape(gtl::ArraySlice<tensorflow::int64>({-1, -1}/*aTFData<Holder>::shape*/))}) { }
+      : r_specifier_(r_specifier) { }
 
     std::unique_ptr<IteratorBase> MakeIterator(
         const string& prefix) const override {
@@ -67,16 +56,18 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
     }
 
     const std::vector<PartialTensorShape>& output_shapes() const override {
-      return output_shapes_;
-      // static std::vector<PartialTensorShape>* shapes = new std::vector<PartialTensorShape>({PartialTensorShape(gtl::ArraySlice<tensorflow::int64>(TFData<Holder>::shape))});
-      // return *shapes;
+      // For some reason, we need to make a static local variable to
+      // hold ::shape to force the compiler to make a symbol that it
+      // can link to, even though this compile-time constant could be inlined.
+      static auto shape_array = TFData<Holder>::shape;
+      static std::vector<PartialTensorShape>* shapes = new std::vector<PartialTensorShape>({PartialTensorShape(gtl::ArraySlice<tensorflow::int64>(shape_array))});
+      return *shapes;
     }
 
     string DebugString() override { return "KaldiTableDatasetOp::Dataset"; }
 
    private:
     std::string r_specifier_;
-    std::vector<PartialTensorShape> output_shapes_;
 
    private:
     class Iterator : public DatasetIterator<Dataset> {
@@ -140,9 +131,6 @@ enum class KaldiType {
 
 template<class Holder>
 struct TFData {
-  static constexpr KaldiType type = KaldiType::FloatMatrix;
-  static constexpr DataType dt = DT_FLOAT;
-  static constexpr std::array<tensorflow::int64, 0> shape{};
 };
 
 template<>
@@ -156,14 +144,14 @@ template<>
 struct TFData<kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>> {
   static constexpr KaldiType type = KaldiType::FloatVector;
   static constexpr DataType dt = DT_FLOAT;
-  static constexpr std::array<tensorflow::int64, 1> shape = {-1};
+  static constexpr std::array<tensorflow::int64, 1> shape{{-1}};
 };
 
 template<>
 struct TFData<kaldi::BasicVectorHolder<kaldi::int32>> {
   static constexpr KaldiType type = KaldiType::Int32Vector;
   static constexpr DataType dt = DT_INT32;
-  static constexpr std::array<tensorflow::int64, 1> shape = {-1};
+  static constexpr std::array<tensorflow::int64, 1> shape{{-1}};
 };
 
 Tensor getValueAsTensor(void *value, KaldiType type) {
@@ -199,22 +187,35 @@ Tensor getValueAsTensor(void *value, KaldiType type) {
   }
 }
 
-REGISTER_KERNEL_BUILDER(
-  Name("KaldiTableDataset")
-  .Device(DEVICE_CPU),
-  KaldiTableDatasetOp<kaldi::KaldiObjectHolder<kaldi::Matrix<kaldi::float32>>>);
+// Use a macro to register ops for the different kinds of tables.
 
-// REGISTER_KERNEL_BUILDER(
-//   Name("KaldiFloatVectorTableDatasetOp")
-//   .Device(DEVICE_CPU),
-// //  .TypeConstraint<kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>>("Holder"),
-//   KaldiTableDatasetOp<kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>>);
+// Note: I struggle to use the correct do/while(0) construct for these
+// macros for whatever reason. I get: "expected unqualified-id" from gcc.
+// TODO: Figure out the cause of that, and make the macros more robust.
+#define REGISTER_DATASET_KERNEL(op_name, holder_type)            \
+  REGISTER_KERNEL_BUILDER(Name(op_name)                          \
+                          .Device(DEVICE_CPU),                   \
+                          KaldiTableDatasetOp<holder_type>)      \
 
-// REGISTER_KERNEL_BUILDER(
-//   Name("KaldiInt32VectorTableDatasetOp")
-//   .Device(DEVICE_CPU)
-// //  .TypeConstraint<kaldi::BasicVectorHolder<kaldi::int32>>("Holder"),
-//   KaldiTableDatasetOp<kaldi::BasicVectorHolder<kaldi::int32>>);
+#define REGISTER_OP_AND_KERNEL_FOR_TABLE(op_name, holder_type)         \
+  REGISTER_OP(op_name)                                                 \
+  .Input("r_specifier: string")                                        \
+  .Output("handle: variant")                                           \
+  .SetIsStateful()                                                     \
+  .SetShapeFn(shape_inference::ScalarShape)                            \
+  .Doc(R"doc(blah)doc");                                               \
+                                                                       \
+  REGISTER_DATASET_KERNEL(op_name, holder_type);
+
+REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiInt32VectorDataset",
+                                 kaldi::BasicVectorHolder<kaldi::int32>)
+REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiFloat32MatrixDataset",
+                                 kaldi::KaldiObjectHolder<kaldi::Matrix<kaldi::float32>>)
+REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiFloat32VectorDataset",
+                                 kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>)
+
+#undef REGISTER_DATASET_KERNEL
+#undef REGISTER_OP_AND_KERNEL_FOR_TABLE
 
 } // namespace tensorflow_ext
 } // namespace galvASR
