@@ -81,8 +81,10 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
       ~Iterator() override {
         if (reader_initialized_) {
           bool failure_occurred = reader_.Close();
-          LOG(ERROR) << this->dataset()->r_specifier_ <<
-            " done early because of an error";
+          if (failure_occurred) {
+            LOG(ERROR) << this->dataset()->r_specifier_ <<
+              " done early because of an error";
+          }
         }
       }
 
@@ -101,8 +103,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
         }
 
         try {
-          out_tensors->operator[](0) =
-            std::move(getValueAsTensor(&reader_.Value(), TFData<Holder>::type));
+          out_tensors->emplace_back(std::move(getValueAsTensor(&reader_.Value(), TFData<Holder>::type)));
         } catch (const kaldi_error& exception) {
           std::stringstream sstr;
           sstr << "Failed to read " << reader_.Key() << " in: " <<
@@ -207,12 +208,12 @@ Tensor getValueAsTensor(void *value, KaldiType type) {
                                                                        \
   REGISTER_DATASET_KERNEL(op_name, holder_type);
 
-REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiInt32VectorDataset",
-                                 kaldi::BasicVectorHolder<kaldi::int32>)
 REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiFloat32MatrixDataset",
                                  kaldi::KaldiObjectHolder<kaldi::Matrix<kaldi::float32>>)
 REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiFloat32VectorDataset",
                                  kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>)
+REGISTER_OP_AND_KERNEL_FOR_TABLE("KaldiInt32VectorDataset",
+                                 kaldi::BasicVectorHolder<kaldi::int32>)
 
 #undef REGISTER_DATASET_KERNEL
 #undef REGISTER_OP_AND_KERNEL_FOR_TABLE
