@@ -50,6 +50,7 @@ ExternalProject_Add_Step(kaldi install_tools
   WORKING_DIRECTORY ${kaldi_PREFIX}/tools
   # Trying adding CXX="-fPIC" and
   # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
+  COMMAND make clean
   COMMAND make
   COMMAND extras/install_irstlm.sh
   COMMAND extras/install_pocolm.sh
