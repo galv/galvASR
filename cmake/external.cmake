@@ -7,7 +7,7 @@ include(ExternalProject)
 
 set(caffe2_PREFIX ${PROJECT_SOURCE_DIR}/third_party/caffe2)
 set(openfst_PREFIX ${PROJECT_SOURCE_DIR}/third_party/openfst)
-set(kaldi_PREFIX ${PROJECT_SOURCE_DIR}/third_party/kaldi)
+set(kaldi_PREFIX ${PROJECT_SOURCE_DIR}/third_party/kaldi/kaldi)
 set(tensorflow_PREFIX ${PROJECT_SOURCE_DIR}/third_party/tensorflow)
 
 # Required packages: Python, CUDA, Kaldi
@@ -34,7 +34,7 @@ endif()
 find_package(CuDNN 7.0)
 
 ExternalProject_Add(kaldi
-  SOURCE_DIR ${kaldi_PREFIX}/kaldi/src
+  SOURCE_DIR ${kaldi_PREFIX}/src
   BUILD_IN_SOURCE 1
   # CONFIGURE_COMMAND ""
   # TODO: Want to make configure arguments more customizable somehow,
@@ -47,7 +47,7 @@ ExternalProject_Add(kaldi
   INSTALL_COMMAND "")
 
 ExternalProject_Add_Step(kaldi install_tools
-  WORKING_DIRECTORY ${kaldi_PREFIX}/kaldi/tools
+  WORKING_DIRECTORY ${kaldi_PREFIX}/tools
   # Trying adding CXX="-fPIC" and
   # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
   COMMAND make
@@ -62,12 +62,13 @@ file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
 
 set(KALDI_FOUND TRUE)
 set(KALDI_DEFINES -DKALDI_DOUBLEPRECISION=0 -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_CLAPACK)
-set(KALDI_INCLUDE_DIRS ${kaldi_PREFIX} ${kaldi_PREFIX}/kaldi/src/
+# See third_party/kaldi/README to understand the first include directory here.
+set(KALDI_INCLUDE_DIRS ${kaldi_PREFIX}/.. ${kaldi_PREFIX}/src/
   ${OPENFST_INCLUDE_DIRS}
   # Make Kaldi's blas includes happy.
-  ${kaldi_PREFIX}/kaldi/tools/ATLAS_headers/include/ ${kaldi_PREFIX}/kaldi/tools/CLAPACK/)
+  ${kaldi_PREFIX}/tools/ATLAS_headers/include/ ${kaldi_PREFIX}/tools/CLAPACK/)
 # TODO: Understand why we need all directories, not just the first one...
-file(GLOB KALDI_LIBRARIES ${kaldi_PREFIX}/kaldi/src/*/kaldi-*.a)
+file(GLOB KALDI_LIBRARIES ${kaldi_PREFIX}/src/*/kaldi-*.a)
 set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
   # HACK: Would be better to query the required BLAS and LAPACK
   # libraries from Kaldi directly
