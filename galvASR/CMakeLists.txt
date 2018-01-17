@@ -11,6 +11,11 @@ endif()
 
 # add_subdirectory(python)
 
+# Put this into the source directory to make an "editable" install
+# easier later.
+configure_file(${PROJECT_SOURCE_DIR}/galvASR/python/_constants.py.in
+  ${PROJECT_SOURCE_DIR}/galvASR/python/_constants.py)
+
 # Disable this for now. I don't understand yet what the difference
 # should be between `python setup.py devel` and
 # `CMAKE_ARGS="-DPYTHON_INSTALL_EDIABLE=YES" python setup.py install`

@@ -1,0 +1,2 @@
+KALDI_ROOT = "@kaldi_PREFIX@"
+OPENFST_ROOT = "@openfst_PREFIX@"
