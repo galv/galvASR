@@ -95,3 +95,9 @@ LOCK
 LOG*
 CURRENT
 MANIFEST-*
+
+# Python setuptools cruft
+/.eggs
+/dist
+/*.egg-info
+/setup-py-build

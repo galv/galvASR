@@ -19,6 +19,14 @@ if(NOT PYTHONLIBS_FOUND)
   find_package(PythonLibs 3.5)
 endif()
 
+# Python site-packages
+# Get canonical directory for python site packages (relative to install
+# location).  It varys from system to system.
+pycmd(python_site_packages "
+       from distutils import sysconfig
+       print(sysconfig.get_python_lib(prefix=''))
+   ")
+
 find_package(CUDA 9.0 QUIET)
 if (CUDA_FOUND)
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
