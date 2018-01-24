@@ -155,3 +155,14 @@ if(USE_TENSORFLOW)
 )
                     
 endif(USE_TENSORFLOW)
+
+if(DEFINED WITH_HTK)
+  # Assumes HTK is pre-installed
+  if(NOT EXISTS "${WITH_HTK}/bin/HInit")
+    message(FATAL_ERROR "${WITH_HTK} is not pointing to an HTK installation directory!")
+  endif()
+  message(WARNING "The HTK License prohibits re-distribution of HTK code in "
+    "commercial applications.")
+  # Used in galvASR/python/_constants.py.in
+  get_filename_component(htk_PREFIX "${WITH_HTK}" ABSOLUTE)
+endif(DEFINED WITH_HTK)

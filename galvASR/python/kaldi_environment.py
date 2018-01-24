@@ -1,33 +1,30 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from contextlib import contextmanager
 import logging
-from multiprocessing import cpu_count
 import os
 import re
 
-from galvASR.python import _constants
+from galvASR.python import constants
 
 log = logging.getLogger('galvASR')
 
 
 def _parse_tools_env_sh_if_exists(env_sh_file_name):
   """
-  ${KALDI_ROOT}/tools/env.sh has contents that we can't generally predict
+  ${KALDI_ROOT}/tools/env.sh has contents that we can't generally predict.
+  We also cannot "source" it from python because that would create a child
+  process, and a parent process can't get a child's environment. Therefore,
+  we "interpret" this file in a very limited way.
 
   Mutates os.environ
   """
-  export_regex = r'^export ([a-zA-Z0-9_]+)=([a-zA-Z0-9_/{}]*)$'
+  export_regex = r'^export ([a-zA-Z0-9_]+)=([a-zA-Z0-9_/{}$:]*)$'
   if not os.path.exists(env_sh_file_name):
     return
   with open(env_sh_file_name) as env_sh_fh:
     for line in env_sh_fh:
       if line.strip() == '':
         continue
-      match = re.search(export_regex)
+      match = re.search(export_regex, line)
       if match:
         env_var = match.group(1)
         expression = match.group(2).replace('$', '')
@@ -37,8 +34,8 @@ def _parse_tools_env_sh_if_exists(env_sh_file_name):
 
 
 def setup_environment():
-  os.environ['KALDI_ROOT'] = _constants.KALDI_ROOT
-  os.environ['OPENFST_ROOT'] = _constants.OPENFST_ROOT
+  os.environ['KALDI_ROOT'] = constants.KALDI_ROOT
+  os.environ['OPENFST_ROOT'] = constants.OPENFST_ROOT
   if not os.path.exists(os.path.join(os.environ['KALDI_ROOT'], 'egs')):
     raise ValueError('KALDI_ROOT is not pointing to a Kaldi repo!')
   for env_variable in ('KALDI_ROOT', 'OPENFST_ROOT'):
@@ -80,12 +77,26 @@ def setup_environment():
 
   # Search for "LC_ALL" in http://kaldi-asr.org/doc/data_prep.html
   # for a discussion of the importance of this environment variable.
-  os.environ['LC_ALL'] = 'C'
+  #
+  # WARNING: Right now, I'm setting LC_ALL to C.UTF-8. This is so that
+  # Python correctly infers that file encodings are UTF-8 (rather than
+  # ASCII, which is the assumed encoding when LC_ALL is C). However, I
+  # am concerned that sorting behavior will change because of
+  # LC_COLLATE's meaning changing between LC_ALL=C and LC_ALL=C.UTF-8.
+  #
+  # C.UTF-8 was introduced in glibc 2.13. All modern linux distro's
+  # (Centos 7, Ubuntu, Debian) should have this.
+  #
+  # These two resources are good. The second one describes how LC_COLLATE's behavior changes
+  # https://unix.stackexchange.com/a/87763
+  # https://sourceware.org/glibc/wiki/Proposals/C.UTF-8
+  os.environ['LC_ALL'] = 'C.UTF-8'
+  # os.environ['LC_COLLATE'] = 'C'
+  # os.environ['LC_CTYPE'] = 'C.UTF-8'
 
-  # Normally the contents of cmd.sh. May want to make these
-  # configurable at some point.
-  #  len(os.sched_getaffinity(0)) is python 3.3+ only
-  max_cpus = cpu_count()
+  # These environmen variables are normally the contents of
+  # cmd.sh. May want to make these configurable at some point.
+  max_cpus = len(os.sched_getaffinity(0))
   max_jobs_run = max_cpus - 1 if max_cpus > 1 else max_cpus
   os.environ['train_cmd'] = 'run.pl --max-jobs-run {0}'.format(max_jobs_run)
   os.environ['decode_cmd'] = 'run.pl --max-jobs-run {0}'.format(max_jobs_run)
