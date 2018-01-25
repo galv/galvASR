@@ -177,7 +177,8 @@ ext_modules = [setuptools.Extension('galvASR-ext', [])]
 packages = []
 
 install_requires.extend(['future',
-                         'setuptools', ])
+                         'setuptools',
+                         'absl-py', ])
 
 ################################################################################
 # Test
