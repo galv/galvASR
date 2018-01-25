@@ -5,9 +5,14 @@ set(__GALVASR_EXTERNAL_INCLUDED TRUE)
 
 include(ExternalProject)
 
-set(caffe2_PREFIX ${PROJECT_SOURCE_DIR}/third_party/caffe2)
+if(DEFINED WITH_EXTERNAL_KALDI)
+  get_filename_component(kaldi_PREFIX "${WITH_EXTERNAL_KALDI}" ABSOLUTE)
+else(DEFINED WITH_EXTERNAL_KALDI)
+  set(kaldi_PREFIX ${PROJECT_SOURCE_DIR}/third_party/kaldi/kaldi)
+endif(DEFINED WITH_EXTERNAL_KALDI)
+
 set(openfst_PREFIX ${PROJECT_SOURCE_DIR}/third_party/openfst)
-set(kaldi_PREFIX ${PROJECT_SOURCE_DIR}/third_party/kaldi/kaldi)
+set(caffe2_PREFIX ${PROJECT_SOURCE_DIR}/third_party/caffe2)
 set(tensorflow_PREFIX ${PROJECT_SOURCE_DIR}/third_party/tensorflow)
 
 # Required packages: Python, CUDA, Kaldi
@@ -33,33 +38,31 @@ if (CUDA_FOUND)
 endif()
 find_package(CuDNN 7.0)
 
-ExternalProject_Add(kaldi
-  SOURCE_DIR ${kaldi_PREFIX}/src
-  BUILD_IN_SOURCE 1
-  # CONFIGURE_COMMAND ""
-  # TODO: Want to make configure arguments more customizable somehow,
-  # at some point.
-  CONFIGURE_COMMAND ./configure --shared
-  BUILD_COMMAND $(MAKE) clean
-  COMMAND $(MAKE) depend
-  COMMAND $(MAKE)
-  COMMAND $(MAKE) biglib
-  INSTALL_COMMAND "")
+if(NOT DEFINED WITH_EXTERNAL_KALDI)
+  ExternalProject_Add(kaldi
+    SOURCE_DIR ${kaldi_PREFIX}/src
+    BUILD_IN_SOURCE 1
+    # CONFIGURE_COMMAND ""
+    # TODO: Want to make configure arguments more customizable somehow,
+    # at some point.
+    CONFIGURE_COMMAND ./configure --shared
+    BUILD_COMMAND $(MAKE) clean
+    COMMAND $(MAKE) depend
+    COMMAND $(MAKE)
+    COMMAND $(MAKE) biglib
+    INSTALL_COMMAND "")
 
-ExternalProject_Add_Step(kaldi install_tools
-  WORKING_DIRECTORY ${kaldi_PREFIX}/tools
-  # Trying adding CXX="-fPIC" and
-  # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
-  COMMAND make clean
-  COMMAND make
-  COMMAND extras/install_irstlm.sh
-  COMMAND extras/install_pocolm.sh
-  DEPENDERS configure
-  )
-
-set(OPENFST_FOUND TRUE)
-set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
-file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
+  ExternalProject_Add_Step(kaldi install_tools
+    WORKING_DIRECTORY ${kaldi_PREFIX}/tools
+    # Trying adding CXX="-fPIC" and
+    # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
+    COMMAND make clean
+    COMMAND make
+    COMMAND extras/install_irstlm.sh
+    COMMAND extras/install_pocolm.sh
+    DEPENDERS configure
+    )
+endif(NOT DEFINED WITH_EXTERNAL_KALDI)
 
 set(KALDI_FOUND TRUE)
 set(KALDI_DEFINES -DKALDI_DOUBLEPRECISION=0 -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_CLAPACK)
@@ -76,6 +79,10 @@ set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
   /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3
   /usr/lib/liblapack_atlas.so.3
   )
+
+set(OPENFST_FOUND TRUE)
+set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
+file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
 
 # Optional packages: Caffe2, Tensorflow
 if(USE_CAFFE2) 
