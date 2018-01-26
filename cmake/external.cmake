@@ -32,6 +32,13 @@ pycmd(python_site_packages "
        print(sysconfig.get_python_lib(prefix=''))
    ")
 
+# We need to install pywrapfst.so ourselves manually.
+pycmd(full_python_site_packages "
+       from distutils import sysconfig
+       print(sysconfig.get_python_lib())
+   ")
+
+
 find_package(CUDA 9.0 QUIET)
 if (CUDA_FOUND)
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
@@ -56,8 +63,8 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
     WORKING_DIRECTORY ${kaldi_PREFIX}/tools
     # Trying adding CXX="-fPIC" and
     # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
-    COMMAND make clean
-    COMMAND make
+    COMMAND $(MAKE) clean
+    COMMAND PYTHON=${PYTHON_EXECUTABLE} $(MAKE) OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ --enable-python CXXFLAGS=-fPIC
     COMMAND extras/install_irstlm.sh
     COMMAND extras/install_pocolm.sh
     DEPENDERS configure
@@ -83,6 +90,9 @@ set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
 set(OPENFST_FOUND TRUE)
 set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
 file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
+
+install(FILES "${kaldi_PREFIX}/tools/openfst/lib/python3.5/site-packages/pywrapfst.so"
+  DESTINATION "${full_python_site_packages}")
 
 # Optional packages: Caffe2, Tensorflow
 if(USE_CAFFE2) 
