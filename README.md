@@ -42,7 +42,8 @@ in terms of making work reproducible in the field of speech
 recognition, with many research groups seeking improvement via very
 large datasets. However, none of these groups has studied whether
 other group's models get the same benefits from larger datasets. I
-would like to the hypothesis that
+would like to test the hypothesis that there may be little significant
+difference between these models on the same datasets.
 
 Therefore, another goal of galvASR is to make a large, multidataset
 benchmarks, one using only free data (we can get ~2000 hours this way,
