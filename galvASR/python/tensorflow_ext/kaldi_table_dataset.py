@@ -2,7 +2,7 @@ from tensorflow.python.data.ops.dataset_ops import Dataset
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import tensor_shape
 
-from galvASR.python.tensorflow._gen_dataset_ops import kaldi_table_dataset_with_op_name
+from galvASR.python.tensorflow_ext._gen_dataset_ops import kaldi_table_dataset_with_op_name
 
 
 class KaldiFloat32MatrixDataset(Dataset):
