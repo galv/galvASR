@@ -71,6 +71,13 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
     )
 endif(NOT DEFINED WITH_EXTERNAL_KALDI)
 
+set(OPENFST_FOUND TRUE)
+set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
+file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
+
+install(FILES "${kaldi_PREFIX}/tools/openfst/lib/python3.5/site-packages/pywrapfst.so"
+  DESTINATION "${full_python_site_packages}")
+
 set(KALDI_FOUND TRUE)
 set(KALDI_DEFINES -DKALDI_DOUBLEPRECISION=0 -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_CLAPACK)
 # See third_party/kaldi/README to understand the first include directory here.
@@ -86,13 +93,6 @@ set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
   /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3
   /usr/lib/liblapack_atlas.so.3
   )
-
-set(OPENFST_FOUND TRUE)
-set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
-file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
-
-install(FILES "${kaldi_PREFIX}/tools/openfst/lib/python3.5/site-packages/pywrapfst.so"
-  DESTINATION "${full_python_site_packages}")
 
 # Optional packages: Caffe2, Tensorflow
 if(USE_CAFFE2) 
