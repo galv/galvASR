@@ -120,7 +120,7 @@ message("CUDNN ${CUDNN_VERSION}")
 message("CUDNN ${CUDNN_LIBRARIES}")
 message("CUDNN ${CUDNN_LIBRARY_DIRS}")
 
-if(USE_TENSORFLOW)
+if(INSTALL_TENSORFLOW)
   ExternalProject_Add(tensorflow
     SOURCE_DIR ${tensorflow_PREFIX}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=tensorflow_install
@@ -135,7 +135,7 @@ if(USE_TENSORFLOW)
                       TF_ENABLE_XLA=0
                       TF_NEED_GDR=0
                       TF_NEED_VERBS=0
-                      #TF_NEED_OPENCL_SYCL=${TF_NEED_OPENCL_SYCL}
+                      TF_NEED_OPENCL_SYCL=0
                       TF_NEED_OPENCL=0
                       TF_NEED_MPI=0
                       TF_NEED_CUDA=1
@@ -149,16 +149,14 @@ if(USE_TENSORFLOW)
                       # capabilities used in Kaldi install
                       TF_CUDA_COMPUTE_CAPABILITIES=3.0,5.0,6.0
                       CC_OPT_FLAGS="-march=native"
-                      TF_SET_ANDROID_WORKSPACE=""
+                      TF_SET_ANDROID_WORKSPACE=0
                       ./configure
-                      BUILD_COMMAND bazel build -c opt --config=cuda --config=monolithic //tensorflow:libtensorflow.so
-                      COMMAND bazel build -c opt --config=cuda --config=monolithic //tensorflow:libtensorflow_cc.so
-                      COMMAND bazel build -c opt --config=cuda --config=monolithic //tensorflow/tools/pip_package:build_pip_package
+                      BUILD_COMMAND bazel build -c opt --config=cuda //tensorflow/tools/pip_package:build_pip_package
                       COMMAND bazel-bin/tensorflow/tools/pip_package/build_pip_package ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg
                       # HACK: Find a way to expand the python wheel
                       # automatically in sucky cmake instead of
                       # hard-coding it!
-                      INSTALL_COMMAND ${PYTHON_EXECUTABLE} -m pip install ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg/tensorflow-1.4.1-cp35-cp35m-linux_x86_64.whl)
+                      INSTALL_COMMAND ${PYTHON_EXECUTABLE} -m pip install ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg/tensorflow-1.6.9-cp35-cp35m-linux_x86_64.whl)
 
   set(TENSORFLOW_INCLUDE_DIRS ${tensorflow_PREFIX}
     ${tensorflow_PREFIX}/bazel-genfiles
@@ -166,12 +164,33 @@ if(USE_TENSORFLOW)
     ${tensorflow_PREFIX}/bazel-tensorflow/external/eigen_archive
     ${tensorflow_PREFIX}/bazel-tensorflow/external/protobuf_archive/src)
   set(TENSORFLOW_LIBRARIES
-#    ${tensorflow_PREFIX}/bazel-out/local_linux-py3-opt/bin/tensorflow/libtensorflow.so
     ${tensorflow_PREFIX}/bazel-bin/tensorflow/libtensorflow_cc.so
-#    ${tensorflow_PREFIX}/bazel-bin/tensorflow/libtensorflow_cc.so
 )
                     
-endif(USE_TENSORFLOW)
+endif(INSTALL_TENSORFLOW)
+
+if(USE_PIP_INSTALLED_TENSORFLOW)
+
+  pycmd(TENSORFLOW_INCLUDE_DIRS "
+       import tensorflow as tf
+       print(' '.join([flag[2:] for flag in tf.sysconfig.get_compile_flags() if flag.startswith('-I')]))
+  ")
+  separate_arguments(TENSORFLOW_INCLUDE_DIRS)
+
+  pycmd(TENSORFLOW_DEFINES "
+       import tensorflow as tf
+       print(' '.join([flag for flag in tf.sysconfig.get_compile_flags() if flag.startswith('-D')]))
+  ")
+  separate_arguments(TENSORFLOW_DEFINES)
+
+  pycmd(TENSORFLOW_LIBRARIES "
+       import tensorflow as tf
+       rpath = ['-Wl,-rpath,' + flag[2:] for flag in tf.sysconfig.get_link_flags() if flag.startswith('-L')]
+       print(' '.join(tf.sysconfig.get_link_flags()) + ' ' + ' '.join(rpath))
+  ")
+  separate_arguments(TENSORFLOW_LIBRARIES)
+
+endif(USE_PIP_INSTALLED_TENSORFLOW)
 
 if(DEFINED WITH_HTK)
   # Assumes HTK is pre-installed

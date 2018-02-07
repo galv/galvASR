@@ -16,7 +16,7 @@ import re
 import shlex
 import subprocess
 import sys
-from textwrap import dedent
+
 
 TOP_DIR = os.path.realpath(os.path.dirname(__file__))
 SRC_DIR = os.path.join(TOP_DIR, 'galvASR')
@@ -128,8 +128,9 @@ class build_ext(setuptools.command.build_ext.build_ext):
               '-DCMAKE_INSTALL_PREFIX:PATH={}'.format(cmake_install_dir),
               '-DPYTHON_EXECUTABLE:FILEPATH={}'.format(py_exe),
               '-DPYTHONINTERP_FOUND=YES',
-              '-DUSE_TENSORFLOW=NO',
-              '-DUSE_CAFFE2=NO'
+              '-DUSE_TENSORFLOW=YES',
+              '-DUSE_PIP_INSTALLED_TENSORFLOW=YES'
+              '-DUSE_CAFFE2=NO',
             ] + cmake_args)
             os.chdir(cwd)
             
@@ -178,7 +179,9 @@ packages = []
 
 install_requires.extend(['future',
                          'setuptools',
-                         'absl-py', ])
+                         'absl-py',
+                         ])
+#                         'tf-nightly-gpu==1.6.0.dev20180204', ])
 
 ################################################################################
 # Test

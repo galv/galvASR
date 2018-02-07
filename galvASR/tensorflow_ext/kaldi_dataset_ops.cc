@@ -1,4 +1,4 @@
-#include "tensorflow/core/kernels/dataset.h"
+#include "tensorflow/core/framework/dataset.h"
 #include "tensorflow/core/framework/partial_tensor_shape.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/common_shape_fns.h"
