@@ -76,7 +76,7 @@ set(OPENFST_FOUND TRUE)
 set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
 file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.a)
 
-file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python*/site-packages/pywrapfst.so")
+file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python3*/site-packages/pywrapfst.so")
 install(FILES "${PYWRAPFST_SO}"
   DESTINATION "${full_python_site_packages}")
 
