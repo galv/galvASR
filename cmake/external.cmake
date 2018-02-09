@@ -39,9 +39,10 @@ pycmd(full_python_site_packages "
    ")
 
 
-find_package(CUDA 9.0 QUIET)
+find_package(CUDA 9.1 QUIET)
 if (CUDA_FOUND)
-  message(STATUS "CUDA detected: " ${CUDA_VERSION})
+  message(STATUS "CUDA detected: ${CUDA_VERSION}")
+  message(STATUS "CUDA toolkit location: ${CUDA_TOOLKIT_ROOT_DIR}")
 endif()
 find_package(CuDNN 7.0)
 
@@ -52,7 +53,7 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
     # CONFIGURE_COMMAND ""
     # TODO: Want to make configure arguments more customizable somehow,
     # at some point.
-    CONFIGURE_COMMAND ./configure --shared
+    CONFIGURE_COMMAND ./configure --static-fst --shared --cudatk-dir=${CUDA_TOOLKIT_ROOT_DIR} --cuda-arch=-gencode\ arch=compute_50,code=sm_50
     BUILD_COMMAND $(MAKE) clean
     COMMAND $(MAKE) depend
     COMMAND $(MAKE)
@@ -63,7 +64,7 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
     WORKING_DIRECTORY ${kaldi_PREFIX}/tools
     # Trying adding CXX="-fPIC" and
     # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
-    COMMAND $(MAKE) clean
+    COMMAND $(MAKE) clean || exit 0
     COMMAND PYTHON=${PYTHON_EXECUTABLE} $(MAKE) OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ --enable-python CXXFLAGS=-fPIC
     COMMAND extras/install_irstlm.sh
     COMMAND extras/install_pocolm.sh
@@ -73,9 +74,10 @@ endif(NOT DEFINED WITH_EXTERNAL_KALDI)
 
 set(OPENFST_FOUND TRUE)
 set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
-file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.so)
+file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.a)
 
-install(FILES "${kaldi_PREFIX}/tools/openfst/lib/python3.5/site-packages/pywrapfst.so"
+file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python*/site-packages/pywrapfst.so")
+install(FILES "${PYWRAPFST_SO}"
   DESTINATION "${full_python_site_packages}")
 
 set(KALDI_FOUND TRUE)
@@ -87,6 +89,11 @@ set(KALDI_INCLUDE_DIRS ${kaldi_PREFIX}/.. ${kaldi_PREFIX}/src/
   ${kaldi_PREFIX}/tools/ATLAS_headers/include/ ${kaldi_PREFIX}/tools/CLAPACK/)
 # TODO: Understand why we need all directories, not just the first one...
 file(GLOB KALDI_LIBRARIES ${kaldi_PREFIX}/src/*/kaldi-*.a)
+# Hack: Globbing does not get the archives in dependency order, and
+# I'm not sure how to get them into dependency order, so list them all
+# twice.
+set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${KALDI_LIBRARIES})
+# set(KALDI_LIBRARIES "${kaldi_PREFIX}/src/lib/libkaldi.so" "-Wl,-rpath,${kaldi_PREFIX}/src/lib/")
 set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
   # HACK: Would be better to query the required BLAS and LAPACK
   # libraries from Kaldi directly
@@ -132,6 +139,7 @@ if(INSTALL_TENSORFLOW)
                       TF_NEED_GCP=0
                       TF_NEED_HDFS=0
                       TF_NEED_S3=0
+                      TF_NEED_KAFKA=0
                       TF_ENABLE_XLA=0
                       TF_NEED_GDR=0
                       TF_NEED_VERBS=0
@@ -156,7 +164,7 @@ if(INSTALL_TENSORFLOW)
                       # HACK: Find a way to expand the python wheel
                       # automatically in sucky cmake instead of
                       # hard-coding it!
-                      INSTALL_COMMAND ${PYTHON_EXECUTABLE} -m pip install ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg/tensorflow-1.6.9-cp35-cp35m-linux_x86_64.whl)
+                      INSTALL_COMMAND ${PYTHON_EXECUTABLE} -m pip install ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg/tensorflow-1.6.0rc0-cp36-cp36m-linux_x86_64.whl)
 
   set(TENSORFLOW_INCLUDE_DIRS ${tensorflow_PREFIX}
     ${tensorflow_PREFIX}/bazel-genfiles
