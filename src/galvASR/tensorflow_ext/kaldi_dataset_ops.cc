@@ -25,7 +25,6 @@ Tensor getValueAsTensor(void *value, KaldiType type);
 template<class Holder>
 class KaldiTableDatasetOp : public DatasetOpKernel {
  public:
-//  using DatasetOpKernel::DatasetOpKernel;
   explicit KaldiTableDatasetOp(OpKernelConstruction* ctx) : DatasetOpKernel(ctx) { }
 
   void MakeDataset(OpKernelContext* ctx, DatasetBase** output) override {
@@ -35,14 +34,14 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
                 r_specifier_tensor->NumElements() == 1,
                 errors::InvalidArgument("May not specify more than one r_specifier"));
     std::string r_specifier(r_specifier_tensor->flat<std::string>()(0));
-    *output = new Dataset(r_specifier);
+    *output = new Dataset(ctx, r_specifier);
   }
 
  private:
-  class Dataset : public DatasetBase {
+  class Dataset : public GraphDatasetBase {
    public:
-    Dataset(const string& r_specifier)
-      : r_specifier_(r_specifier) { }
+    Dataset(OpKernelContext* ctx, const string& r_specifier)
+      : GraphDatasetBase(ctx), r_specifier_(r_specifier) { }
 
     std::unique_ptr<IteratorBase> MakeIterator(
         const string& prefix) const override {
@@ -76,17 +75,25 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
       MyParams;
 
      public:
+      // Do I need to do something here?
       explicit Iterator(const MyParams& params)
-        : DatasetIterator<Dataset>(params) {}
-      ~Iterator() override {
-        if (reader_initialized_) {
-          bool failure_occurred = reader_.Close();
-          if (failure_occurred) {
-            LOG(ERROR) << this->dataset()->r_specifier_ <<
-              " done early because of an error";
-          }
-        }
+        : DatasetIterator<Dataset>(params) {
+        // I'm not sure why, but for some reason Dataset is being
+        // referenced one too many times. This little work around
+        // handles the issue.
+        this->dataset()->Unref();
       }
+      // When does the destructor get called anyway?
+      // ~Iterator() override {
+      //   mutex_lock l(mu_);
+      //   if (reader_initialized_) {
+      //     bool failure_occurred = reader_.Close();
+      //     if (failure_occurred) {
+      //       LOG(ERROR) << this->dataset()->r_specifier_ <<
+      //         " done early because of an error";
+      //     }
+      //   }
+      // }
 
       Status GetNextInternal(IteratorContext* /*ctx*/,
                              std::vector<Tensor>* out_tensors,
@@ -101,6 +108,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
           }
           reader_initialized_ = true;
         }
+        if (reader_.Done()) { *end_of_sequence = true; return Status::OK(); }
 
         try {
           out_tensors->emplace_back(std::move(getValueAsTensor(&reader_.Value(), TFData<Holder>::type)));
@@ -111,7 +119,6 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
           return Status(error::NOT_FOUND, sstr.str());
         }
         reader_.Next();
-        if (reader_.Done()) { *end_of_sequence = true; }
         return Status::OK();
       }
 
@@ -192,7 +199,8 @@ Tensor getValueAsTensor(void *value, KaldiType type) {
 
 // Note: I struggle to use the correct do/while(0) construct for these
 // macros for whatever reason. I get: "expected unqualified-id" from gcc.
-// TODO: Figure out the cause of that, and make the macros more robust.
+// This is because you can't use do {} while(0) in global scope.
+// Would have to use a constructor instead.
 #define REGISTER_DATASET_KERNEL(op_name, holder_type)            \
   REGISTER_KERNEL_BUILDER(Name(op_name)                          \
                           .Device(DEVICE_CPU),                   \

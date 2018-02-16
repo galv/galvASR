@@ -8,12 +8,12 @@ include(ExternalProject)
 if(DEFINED WITH_EXTERNAL_KALDI)
   get_filename_component(kaldi_PREFIX "${WITH_EXTERNAL_KALDI}" ABSOLUTE)
 else(DEFINED WITH_EXTERNAL_KALDI)
-  set(kaldi_PREFIX ${PROJECT_SOURCE_DIR}/third_party/kaldi/kaldi)
+  set(kaldi_PREFIX ${PROJECT_TOP_DIR}/third_party/kaldi/kaldi)
 endif(DEFINED WITH_EXTERNAL_KALDI)
 
-set(openfst_PREFIX ${PROJECT_SOURCE_DIR}/third_party/openfst)
-set(caffe2_PREFIX ${PROJECT_SOURCE_DIR}/third_party/caffe2)
-set(tensorflow_PREFIX ${PROJECT_SOURCE_DIR}/third_party/tensorflow)
+set(openfst_PREFIX ${PROJECT_TOP_DIR}/third_party/openfst)
+set(caffe2_PREFIX ${PROJECT_TOP_DIR}/third_party/caffe2)
+set(tensorflow_PREFIX ${PROJECT_TOP_DIR}/third_party/tensorflow)
 
 # Required packages: Python, CUDA, Kaldi
 if(NOT PYTHONINTERP_FOUND)
@@ -39,7 +39,7 @@ pycmd(full_python_site_packages "
    ")
 
 
-find_package(CUDA 9.1 QUIET)
+find_package(CUDA 9.0 QUIET)
 if (CUDA_FOUND)
   message(STATUS "CUDA detected: ${CUDA_VERSION}")
   message(STATUS "CUDA toolkit location: ${CUDA_TOOLKIT_ROOT_DIR}")
@@ -50,21 +50,18 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
   ExternalProject_Add(kaldi
     SOURCE_DIR ${kaldi_PREFIX}/src
     BUILD_IN_SOURCE 1
-    # CONFIGURE_COMMAND ""
     # TODO: Want to make configure arguments more customizable somehow,
     # at some point.
-    CONFIGURE_COMMAND ./configure --static-fst --shared --cudatk-dir=${CUDA_TOOLKIT_ROOT_DIR} --cuda-arch=-gencode\ arch=compute_50,code=sm_50
-    BUILD_COMMAND $(MAKE) clean
-    COMMAND $(MAKE) depend
+    CONFIGURE_COMMAND ./configure --static-fst --shared --cudatk-dir=${CUDA_TOOLKIT_ROOT_DIR}
+    # BUILD_COMMAND $(MAKE) clean
+    BUILD_COMMAND $(MAKE) depend
     COMMAND $(MAKE)
     COMMAND $(MAKE) biglib
     INSTALL_COMMAND "")
 
   ExternalProject_Add_Step(kaldi install_tools
     WORKING_DIRECTORY ${kaldi_PREFIX}/tools
-    # Trying adding CXX="-fPIC" and
-    # OPENFST_CONFIGURE="--enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-python" at some point
-    COMMAND $(MAKE) clean || exit 0
+    # COMMAND $(MAKE) clean || exit 0
     COMMAND PYTHON=${PYTHON_EXECUTABLE} $(MAKE) OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ --enable-python CXXFLAGS=-fPIC
     COMMAND extras/install_irstlm.sh
     COMMAND extras/install_pocolm.sh
@@ -76,6 +73,9 @@ set(OPENFST_FOUND TRUE)
 set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
 file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.a)
 
+# We should really install this regardless of whether galvASR is being
+# installed. Best to factor openfst out into its own
+# "ExternalProject_Add" separate from Kaldi.
 file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python3*/site-packages/pywrapfst.so")
 install(FILES "${PYWRAPFST_SO}"
   DESTINATION "${full_python_site_packages}")
@@ -127,58 +127,7 @@ message("CUDNN ${CUDNN_VERSION}")
 message("CUDNN ${CUDNN_LIBRARIES}")
 message("CUDNN ${CUDNN_LIBRARY_DIRS}")
 
-if(INSTALL_TENSORFLOW)
-  ExternalProject_Add(tensorflow
-    SOURCE_DIR ${tensorflow_PREFIX}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=tensorflow_install
-    BUILD_IN_SOURCE 1 # Not really true, but we may need this for Bazel build.
-    CONFIGURE_COMMAND PYTHON_BIN_PATH=${PYTHON_EXECUTABLE}
-                      USE_DEFAULT_PYTHON_LIB_PATH=1
-                      TF_NEED_MKL=0
-                      TF_NEED_JEMALLOC=0
-                      TF_NEED_GCP=0
-                      TF_NEED_HDFS=0
-                      TF_NEED_S3=0
-                      TF_NEED_KAFKA=0
-                      TF_ENABLE_XLA=0
-                      TF_NEED_GDR=0
-                      TF_NEED_VERBS=0
-                      TF_NEED_OPENCL_SYCL=0
-                      TF_NEED_OPENCL=0
-                      TF_NEED_MPI=0
-                      TF_NEED_CUDA=1
-                      TF_CUDA_CLANG=0
-                      TF_CUDA_VERSION=${CUDA_VERSION}
-                      CUDA_TOOLKIT_PATH=${CUDA_TOOLKIT_ROOT_DIR}
-                      TF_CUDNN_VERSION=${CUDNN_VERSION}
-                      CUDNN_INSTALL_PATH=${CUDNN_LIBRARIES}
-                      TF_CUDA_CONFIG_REPO=""
-                      # TODO: Make these the same as the compute
-                      # capabilities used in Kaldi install
-                      TF_CUDA_COMPUTE_CAPABILITIES=3.0,5.0,6.0
-                      CC_OPT_FLAGS="-march=native"
-                      TF_SET_ANDROID_WORKSPACE=0
-                      ./configure
-                      BUILD_COMMAND bazel build -c opt --config=cuda //tensorflow/tools/pip_package:build_pip_package
-                      COMMAND bazel-bin/tensorflow/tools/pip_package/build_pip_package ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg
-                      # HACK: Find a way to expand the python wheel
-                      # automatically in sucky cmake instead of
-                      # hard-coding it!
-                      INSTALL_COMMAND ${PYTHON_EXECUTABLE} -m pip install ${PROJECT_BINARY_DIR}/tensorflow-prefix/tmp/tensorflow_pkg/tensorflow-1.6.0rc0-cp36-cp36m-linux_x86_64.whl)
-
-  set(TENSORFLOW_INCLUDE_DIRS ${tensorflow_PREFIX}
-    ${tensorflow_PREFIX}/bazel-genfiles
-    ${tensorflow_PREFIX}/bazel-tensorflow/external/nsync/public
-    ${tensorflow_PREFIX}/bazel-tensorflow/external/eigen_archive
-    ${tensorflow_PREFIX}/bazel-tensorflow/external/protobuf_archive/src)
-  set(TENSORFLOW_LIBRARIES
-    ${tensorflow_PREFIX}/bazel-bin/tensorflow/libtensorflow_cc.so
-)
-                    
-endif(INSTALL_TENSORFLOW)
-
-if(USE_PIP_INSTALLED_TENSORFLOW)
-
+if(USE_TENSORFLOW)
   pycmd(TENSORFLOW_INCLUDE_DIRS "
        import tensorflow as tf
        print(' '.join([flag[2:] for flag in tf.sysconfig.get_compile_flags() if flag.startswith('-I')]))
@@ -193,12 +142,10 @@ if(USE_PIP_INSTALLED_TENSORFLOW)
 
   pycmd(TENSORFLOW_LIBRARIES "
        import tensorflow as tf
-       rpath = ['-Wl,-rpath,' + flag[2:] for flag in tf.sysconfig.get_link_flags() if flag.startswith('-L')]
-       print(' '.join(tf.sysconfig.get_link_flags()) + ' ' + ' '.join(rpath))
+       print(' '.join(tf.sysconfig.get_link_flags()))
   ")
   separate_arguments(TENSORFLOW_LIBRARIES)
-
-endif(USE_PIP_INSTALLED_TENSORFLOW)
+endif(USE_TENSORFLOW)
 
 if(DEFINED WITH_HTK)
   # Assumes HTK is pre-installed
@@ -210,3 +157,7 @@ if(DEFINED WITH_HTK)
   # Used in galvASR/python/_constants.py.in
   get_filename_component(htk_PREFIX "${WITH_HTK}" ABSOLUTE)
 endif(DEFINED WITH_HTK)
+
+# Kaldi depends on pthreads
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)

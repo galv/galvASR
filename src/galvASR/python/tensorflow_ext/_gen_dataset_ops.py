@@ -19,7 +19,7 @@ from tensorflow.python.framework import op_def_library as _op_def_library
 # CMake. TODO(galv)
 
 # Is this the right place to load the library?
-kaldi_io = tf.load_op_library(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../tensorflow_ext/libtensorflow_ext.so'))
+kaldi_io = tf.load_op_library(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'libtensorflow_ext.so'))
 
 
 def kaldi_table_dataset_with_op_name(op_name, r_specifier, name=None):
@@ -33,7 +33,7 @@ def kaldi_table_dataset_with_op_name(op_name, r_specifier, name=None):
     r_specifier = _ops.convert_to_tensor(r_specifier, _dtypes.string)
     _inputs_flat = [r_specifier]
     _attrs = None
-    _result = _execute.execute(op_name, 1, inputs=_inputs_flat,
+    _result = _execute.execute(bytes(op_name), 1, inputs=_inputs_flat,
                                attrs=_attrs, ctx=_ctx, name=name)
   _execute.record_gradient(op_name, _inputs_flat, _attrs, _result, name)
   _result, = _result
@@ -64,25 +64,25 @@ def _create_kaldi_table_dataset_op_proto(op_name):
 
 
 def _create_op_def_library(op_protos):
+  op_list = _op_def_pb2.OpList()
+
   for op_proto in op_protos:
     registered_ops = _registry.get_registered_ops()
     if op_proto.name not in registered_ops:
       raise LookupError("Op with name {0} not registered".format(op_proto.name))
 
-    op_def_lib = _op_def_library.OpDefLibrary()
-    ops_proto = _op_def_pb2.OpList()
-    ops_proto.op.extend([op_proto])
+    op_list.op.extend([op_proto])
 
   # Fails if the interfaces ("op schemas") don't match between the
   # previously registered op and this one.
-  _registry.register_op_list(ops_proto)
+  _registry.register_op_list(op_list)
 
-  op_def_lib.add_op_list(ops_proto)
-
+  op_def_lib = _op_def_library.OpDefLibrary()
+  op_def_lib.add_op_list(op_list)
   return op_def_lib
 
 
 _op_def_lib = _create_op_def_library(
-  [_create_kaldi_table_dataset_op_proto("KaldiFloat32MatrixDataset"),])
-  # _create_kaldi_table_dataset_op_proto("KaldiFloat32VectorDataset"),
-  # _create_kaldi_table_dataset_op_proto("KaldiInt32VectorDataset")])
+  [_create_kaldi_table_dataset_op_proto("KaldiFloat32MatrixDataset"),
+   _create_kaldi_table_dataset_op_proto("KaldiFloat32VectorDataset"),
+   _create_kaldi_table_dataset_op_proto("KaldiInt32VectorDataset")])

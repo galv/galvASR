@@ -7,9 +7,9 @@ from __future__ import unicode_literals
 from distutils.spawn import find_executable
 from distutils import sysconfig, log
 import setuptools
-import setuptools.command.build_py
-import setuptools.command.develop
-import setuptools.command.build_ext
+from setuptools.command.build_py  import build_py
+from setuptools.command.build_ext import build_ext
+from setuptools.command.develop   import develop
 
 import os
 import re
@@ -19,7 +19,7 @@ import sys
 
 
 TOP_DIR = os.path.realpath(os.path.dirname(__file__))
-SRC_DIR = os.path.join(TOP_DIR, 'galvASR')
+SRC_DIR = os.path.join(TOP_DIR, 'src/galvASR')
 
 install_requires = []
 setup_requires = []
@@ -62,7 +62,7 @@ version = "{0}.dev{1}+{2}".format(version_tag, commits_since_tag, current_hash)
 ################################################################################
 
 
-class build_py(setuptools.command.build_py.build_py):
+class build_py(build_py):
     def run(self):
         setuptools.command.build_py.build_py.run(self)
 
@@ -123,18 +123,19 @@ class build_ext(setuptools.command.build_ext.build_ext):
             os.makedirs(build_dir, exist_ok=True)
             cwd = os.getcwd()
             os.chdir(build_dir)
-            self.compiler.spawn([
-              'cmake', TOP_DIR,
+            self.spawn([
+              'cmake', os.path.join(TOP_DIR, 'src'),
               '-DCMAKE_INSTALL_PREFIX:PATH={}'.format(cmake_install_dir),
               '-DPYTHON_EXECUTABLE:FILEPATH={}'.format(py_exe),
               '-DPYTHONINTERP_FOUND=YES',
               '-DUSE_TENSORFLOW=YES',
-              '-DUSE_PIP_INSTALLED_TENSORFLOW=YES'
+              '-DUSE_PIP_INSTALLED_TENSORFLOW=YES',
+              '-DINSTALL_TENSORFLOW=NO',
               '-DUSE_CAFFE2=NO',
             ] + cmake_args)
             os.chdir(cwd)
             
-            self.compiler.spawn([
+            self.spawn([
                 'make', '-j',
                 '-C', build_dir,
                 'install'
@@ -154,41 +155,45 @@ class build_ext(setuptools.command.build_ext.build_ext):
     def get_outputs(self):
         return [os.path.join(self.build_lib, 'galvASR')]
 
+    # This command appears to be called by 'python setup.py build',
+    # rather than run()
     def build_extensions(self):
-        assert len(self.extensions) == 1
-        self._build_with_cmake()
+      self._build_with_cmake()
+
+    def run(self):
+      self._build_with_cmake()
 
 
 cmdclass = {
-    'build_py': build_py,
-    'develop': develop,
-    'build_ext': build_ext,
+  'build_py': build_py,
+  'develop': develop,
+  'build_ext': build_ext
 }
 
 ################################################################################
 # Extensions
 ################################################################################
 
-ext_modules = [setuptools.Extension('galvASR-ext', [])]
+ext_modules = [setuptools.Extension('galvASR', [])]
 
 ################################################################################
 # Packages
 ################################################################################
 
 packages = []
-
-install_requires.extend(['future',
-                         'setuptools',
-                         'absl-py',
-                         ])
-#                         'tf-nightly-gpu==1.6.0.dev20180204', ])
+setup_requires.extend(['future',
+                       'setuptools',
+                       'absl-py',
+                       'pytest-runner'])
+# setuptools cannot specify build-time depencies.
+# I'm not going to deal with this right now.
+#                       'tf-nightly-gpu==1.7.0.dev20180207', ])
 
 ################################################################################
 # Test
 ################################################################################
 
-setup_requires.append('pytest-runner')
-tests_require.append('pytest-cov')
+tests_require.append(['pytest-cov', 'pytest'])
 
 ################################################################################
 # Final

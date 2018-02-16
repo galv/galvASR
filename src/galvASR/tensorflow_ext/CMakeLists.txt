@@ -11,6 +11,8 @@ add_library(
 set_property(TARGET tensorflow_ext PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(tensorflow_ext ${KALDI_LIBRARIES} ${TENSORFLOW_LIBRARIES})
+target_link_libraries(tensorflow_ext Threads::Threads)
+set(LIBRARY_WRITE_DIR galvASR/python/tensorflow_ext)
 set_target_properties(tensorflow_ext PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-   ${CMAKE_BINARY_DIR}/galvASR/python)
-install(TARGETS tensorflow_ext DESTINATION "${python_site_packages}/galvASR/python/tensorflow_ext")
+  "${CMAKE_BINARY_DIR}/${LIBRARY_WRITE_DIR}")
+install(TARGETS tensorflow_ext DESTINATION "${python_site_packages}/${LIBRARY_OUTPUT_DIRECTORY}")

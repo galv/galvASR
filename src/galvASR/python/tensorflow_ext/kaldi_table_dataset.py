@@ -1,3 +1,4 @@
+import tensorflow as tf
 from tensorflow.python.data.ops.dataset_ops import Dataset
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import tensor_shape
@@ -12,6 +13,10 @@ class KaldiFloat32MatrixDataset(Dataset):
 
   def _as_variant_tensor(self):
     return kaldi_table_dataset_with_op_name("KaldiFloat32MatrixDataset", self._r_specifier)
+
+  @property
+  def output_classes(self):
+    return tf.Tensor
 
   @property
   def output_shapes(self):
@@ -31,6 +36,10 @@ class KaldiFloat32VectorDataset(Dataset):
     return kaldi_table_dataset_with_op_name("KaldiFloat32VectorDataset", self._r_specifier)
 
   @property
+  def output_classes(self):
+    return tf.Tensor
+
+  @property
   def output_shapes(self):
     return tensor_shape.TensorShape([None])
 
@@ -41,11 +50,15 @@ class KaldiFloat32VectorDataset(Dataset):
 
 class KaldiInt32VectorDataset(Dataset):
   def __init__(self, r_specifier):
-    super(KaldiFloat32VectorDataset, self).__init__()
+    super(KaldiInt32VectorDataset, self).__init__()
     self._r_specifier = r_specifier
 
   def _as_variant_tensor(self):
     return kaldi_table_dataset_with_op_name("KaldiInt32VectorDataset", self._r_specifier)
+
+  @property
+  def output_classes(self):
+    return tf.Tensor
 
   @property
   def output_shapes(self):
