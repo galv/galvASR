@@ -1,4 +1,5 @@
 import collections
+import itertools
 import tempfile
 
 import tensorflow as tf
@@ -31,8 +32,8 @@ def test_read():
     iterator = dataset.make_one_shot_iterator()
     next_element = iterator.get_next()
     with tf.Session() as session:
-      for ground_truth in arrays.values():
+      i = 0
+      for ground_truth in itertools.chain.from_iterable(itertools.repeat(arrays.values(), num_repeats)):
+        print("Run number", i)
         assert np.array_equal(ground_truth, session.run(next_element))
-
-# if __name__ == "__main__":
-#     tf.test.main()
+        i += 1

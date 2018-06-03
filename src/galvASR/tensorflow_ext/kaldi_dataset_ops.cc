@@ -81,24 +81,26 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
         // I'm not sure why, but for some reason Dataset is being
         // referenced one too many times. This little work around
         // handles the issue.
-        this->dataset()->Unref();
+        // this->dataset()->Unref();
       }
       // When does the destructor get called anyway?
-      // ~Iterator() override {
-      //   mutex_lock l(mu_);
-      //   if (reader_initialized_) {
-      //     bool failure_occurred = reader_.Close();
-      //     if (failure_occurred) {
-      //       LOG(ERROR) << this->dataset()->r_specifier_ <<
-      //         " done early because of an error";
-      //     }
-      //   }
-      // }
+      ~Iterator() override {
+        mutex_lock l(mu_);
+        if (reader_initialized_) {
+          bool failure_occurred = reader_.Close();
+          if (failure_occurred) {
+            LOG(ERROR) << this->dataset()->r_specifier_ <<
+              " done early because of an error";
+          }
+        }
+        // this->dataset()->Unref();
+      }
 
       Status GetNextInternal(IteratorContext* /*ctx*/,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
         mutex_lock l(mu_);
+        *end_of_sequence = false;
         if (!reader_initialized_) {
           if (!reader_.Open(this->dataset()->r_specifier_)) {
             std::stringstream sstr;
@@ -106,6 +108,9 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
             LOG(ERROR) << sstr.str();
             return Status(error::NOT_FOUND, sstr.str());
           }
+          std::stringstream sstr;
+          sstr << "Succesfully opened: " << this->dataset()->r_specifier_;
+          LOG(INFO) << sstr.str();
           reader_initialized_ = true;
         }
         if (reader_.Done()) { *end_of_sequence = true; return Status::OK(); }
