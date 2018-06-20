@@ -43,7 +43,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
     Dataset(OpKernelContext* ctx, const string& r_specifier)
       : GraphDatasetBase(ctx), r_specifier_(r_specifier) { }
 
-    std::unique_ptr<IteratorBase> MakeIterator(
+    std::unique_ptr<IteratorBase> MakeIteratorInternal(
         const string& prefix) const override {
       return std::unique_ptr<IteratorBase>(
           new Iterator({this, strings::StrCat(prefix, "::KaldiTable")}));
@@ -63,7 +63,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
       return *shapes;
     }
 
-    string DebugString() override { return "KaldiTableDatasetOp::Dataset"; }
+    string DebugString() const override { return "KaldiTableDatasetOp::Dataset"; }
 
    private:
     std::string r_specifier_;
