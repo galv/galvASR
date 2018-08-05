@@ -26,6 +26,7 @@ __launch_bounds__(256, 1)
   const int SMEM_I_SIZE = ((BLOCK_WRITE_LENGTH * NUM_MATS) % 2 == 1) ?
     BLOCK_WRITE_LENGTH * NUM_MATS + 1 : BLOCK_WRITE_LENGTH * NUM_MATS;
   // Load input into shared memory for faster accesses?
+  // GROUP_BATCH_SIZE purpose is not clear... Let's assume == 1 for now
   __shared__ T_MATH smemi[GROUP_BATCH_SIZE > 1 ? MINIBATCH : 2][SMEM_I_SIZE];
   // Double buffering?
   __shared__ T_MATH smemh[2][SMEM_I_SIZE];
@@ -49,6 +50,42 @@ __launch_bounds__(256, 1)
   colStart += (warpIdBlock % WARPS_PER_BLOCK_Y) * (VEC_LENGTH / WARPS_PER_BLOCK_Y);
 
   const int rowStride = (RNN_MODE == CUDNN_LSTM || RNN_MODE == CUDNN_GRU) ? HIDDEN_SIZE : 1;
+
+  T_MATH T_reg[ELE_PER_THREAD_Y][ELE_PER_THREAD_X];
+
+  RNN_persist_loadT<THREAD_Y_STRIDE, NUM_MATS, true>(T_reg, T, rowStart, colStart, rowStride);
+
+  // What is the purpose of this zeroing?
+  for (int i_ = 0; i_ < BLOCK_WRITE_LENGTH * NUM_MATS; i_ += THREADS_PER_BLOCK) {
+    int i = i_ + threadIdx.x;
+    if (i < BLOCK_WRITE_LENGTH * NUM_MATS) {
+      smemi[0][i] = cuGet<T_MATH>(0);
+      smemi[1][i] = cuGet<T_MATH>(0);
+    }
+  }
+  for (int i_ = 0; i_ < WARPS_PER_BLOCK_Y * WARP_SIZE_Y * ELE_PER_THREAD_Y;
+       i_ += THREADS_PER_BLOCK) {
+    i = i_ + threadIdx.x;
+    if (i < WARPS_PER_BLOCK_Y * WARP_SIZE_Y * ELE_PER_THREAD_Y) {
+      smemh[0][i] = cuGet<T_MATH>(0);
+      smemh[1][i] = cuGet<T_MATH>(0);
+    }
+  }
+
+  if (RNN_MODE == CUDNN_LSTM || RNN_MODE == CUDNN_GRU) {
+    for (int batch = 0; batch < MINIBATCH; batch++) {
+      #pragma unroll
+      for (int i_ = 0; i_ < BLOCK_WRITE_LENGTH; i_ += THREADS_PER_BLOCK) {
+        int i = i_ + threadIdx.x;
+        if (i < BLOCK_WRITE_LENGTH && i + BLOCK_WRITE_LENGTH * blockIdx.x < HIDDEN_SIZE) {
+          if (RNN_MODE == CUDNN_LSTM) {
+            if (cx != NULL) smemcx[i][batch] = cuGet<T_MATH>(cx[i + BLOCK_WRITE_LENGTH * blockIdx.x + batch * BATCH_STRIDE]);
+            else            smemcx[i][batch] = cuGet<T_MATH>(0);
+          }
+        }
+      }
+    }
+  }
 }
                                     
 

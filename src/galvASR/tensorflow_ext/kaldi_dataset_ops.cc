@@ -22,6 +22,9 @@ struct TFData;
 
 Tensor getValueAsTensor(void *value, KaldiType type);
 
+// Do I really need to implement the Dataset API? Seems like I could
+// make a dataset of paths to my kaldi tables, and then map them
+// through a regular parser operation... right?
 template<class Holder>
 class KaldiTableDatasetOp : public DatasetOpKernel {
  public:
