@@ -1,0 +1,9 @@
+[build-system]
+# I cannot get this to work. Ugh.
+requires = ["tensorflow-gpu", "setuptools", "wheel", "scikit-build", "cmake"]  #, "ninja"]
+
+[tool.flit.metadata]
+module = "hello"
+author = "Author Name"
+author-email = "username@users.noreply.github.com"
+home-page = "https://github.com/username/reponame"

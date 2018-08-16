@@ -53,16 +53,16 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
     # TODO: Want to make configure arguments more customizable somehow,
     # at some point.
     CONFIGURE_COMMAND ./configure --static-fst --shared --cudatk-dir=${CUDA_TOOLKIT_ROOT_DIR}
-    # BUILD_COMMAND $(MAKE) clean
-    BUILD_COMMAND $(MAKE) depend
-    COMMAND $(MAKE)
-    COMMAND $(MAKE) biglib
+    # BUILD_COMMAND make clean
+    BUILD_COMMAND make depend
+    COMMAND make
+    COMMAND make biglib
     INSTALL_COMMAND "")
 
   ExternalProject_Add_Step(kaldi install_tools
     WORKING_DIRECTORY ${kaldi_PREFIX}/tools
-    # COMMAND $(MAKE) clean || exit 0
-    COMMAND PYTHON=${PYTHON_EXECUTABLE} $(MAKE) OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ --enable-python CXXFLAGS=-fPIC
+    # COMMAND make clean || exit 0
+    COMMAND PYTHON=${PYTHON_EXECUTABLE} make OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ --enable-python CXXFLAGS=-fPIC
     COMMAND extras/install_irstlm.sh
     COMMAND extras/install_pocolm.sh
     DEPENDERS configure
@@ -77,8 +77,8 @@ file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.a)
 # installed. Best to factor openfst out into its own
 # "ExternalProject_Add" separate from Kaldi.
 file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python3*/site-packages/pywrapfst.so")
-install(FILES "${PYWRAPFST_SO}"
-  DESTINATION "${full_python_site_packages}")
+# install(FILES "${PYWRAPFST_SO}"
+#   DESTINATION "${full_python_site_packages}")
 
 set(KALDI_FOUND TRUE)
 set(KALDI_DEFINES -DKALDI_DOUBLEPRECISION=0 -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_CLAPACK)
