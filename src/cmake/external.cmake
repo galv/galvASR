@@ -96,9 +96,10 @@ set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${KALDI_LIBRARIES})
 # set(KALDI_LIBRARIES "${kaldi_PREFIX}/src/lib/libkaldi.so" "-Wl,-rpath,${kaldi_PREFIX}/src/lib/")
 set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
   # HACK: Would be better to query the required BLAS and LAPACK
-  # libraries from Kaldi directly
-  /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3
-  /usr/lib/liblapack_atlas.so.3
+  # libraries from Kaldi directly. Do it by grepping "ATLASLIBS" in kaldi.mk
+  /usr/lib/liblapack_atlas.a /usr/lib/libcblas.a /usr/lib/libatlas.a /usr/lib/libf77blas.a
+  # /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3
+  # /usr/lib/liblapack_atlas.so.3
   )
 
 # Optional packages: Caffe2, Tensorflow

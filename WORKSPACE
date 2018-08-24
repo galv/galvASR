@@ -5,6 +5,12 @@ local_repository(
     path = "third_party/tensorflow",
 )
 
+new_local_repository(
+    name = "kaldi",
+    path = "third_party/kaldi/",
+    build_file = "kaldi.BUILD",
+)
+
 http_archive(
     name = "io_bazel_rules_closure",
     sha256 = "a38539c5b5c358548e75b44141b4ab637bba7c4dc02b46b1f62a96d6433f56ae",
