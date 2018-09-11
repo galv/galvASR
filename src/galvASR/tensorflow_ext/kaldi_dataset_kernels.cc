@@ -3,6 +3,7 @@
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/common_shape_fns.h"
 
+#include "kaldi/src/feat/wave-reader.h"
 #include "kaldi/src/util/kaldi-holder.h"
 #include "kaldi/src/util/kaldi-table.h"
 
@@ -134,7 +135,8 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
 enum class KaldiType {
   FloatMatrix,
   FloatVector,
-  Int32Vector
+  Int32Vector,
+  WaveData
 };
 
 template<class Holder>
@@ -161,6 +163,14 @@ struct TFData<kaldi::BasicVectorHolder<kaldi::int32>> {
   static constexpr DataType dt = DT_INT32;
   static constexpr std::array<tensorflow::int64, 1> shape{{-1}};
 };
+
+template<>
+struct TFData<kaldi::WaveHolder> {
+  static constexpr KaldiType type = KaldiType::WaveData;
+  static constexpr DataType dt = DT_FLOAT;
+  static constexpr std::array<tensorflow::int64, 2> shape{{-1, -1}};
+};
+
 
 Tensor getValueAsTensor(void *value, KaldiType type) {
   switch (type) {
@@ -192,15 +202,15 @@ Tensor getValueAsTensor(void *value, KaldiType type) {
       std::copy_n(vector.data(), vector.size(), flat.data());
       return tensor;
     }
+    case KaldiType::WaveData: {
+      // Warning: We are calling the copy constructor here
+      kaldi::Matrix<float> matrix = static_cast<kaldi::WaveData*>(value)->Data();
+      return getValueAsTensor(&matrix, KaldiType::FloatMatrix);
+    }
   }
 }
 
 // Use a macro to register ops for the different kinds of tables.
-
-// Note: I struggle to use the correct do/while(0) construct for these
-// macros for whatever reason. I get: "expected unqualified-id" from gcc.
-// This is because you can't use do {} while(0) in global scope.
-// Would have to use a constructor instead.
 #define REGISTER_DATASET_KERNEL(op_name, holder_type)            \
   REGISTER_KERNEL_BUILDER(Name(op_name)                          \
                           .Device(DEVICE_CPU),                   \
@@ -211,6 +221,7 @@ REGISTER_DATASET_KERNEL("KaldiFloat32VectorDataset",
                                  kaldi::KaldiObjectHolder<kaldi::Vector<kaldi::float32>>)
 REGISTER_DATASET_KERNEL("KaldiInt32VectorDataset",
                                  kaldi::BasicVectorHolder<kaldi::int32>)
+REGISTER_DATASET_KERNEL("KaldiWaveDataset", kaldi::WaveHolder)
 
 #undef REGISTER_DATASET_KERNEL
 

@@ -71,3 +71,24 @@ class KaldiInt32VectorDataset(Dataset):
   @property
   def output_types(self):
     return dtypes.int32
+
+
+class KaldiWaveDataset(Dataset):
+  def __init__(self, r_specifier):
+    super(KaldiWaveDataset, self).__init__()
+    self._r_specifier = r_specifier
+
+  def _as_variant_tensor(self):
+    return _op_lib.kaldi_wave_dataset(self._r_specifier)
+
+  @property
+  def output_classes(self):
+    return tf.Tensor
+
+  @property
+  def output_shapes(self):
+    return tensor_shape.TensorShape([None, None])
+
+  @property
+  def output_types(self):
+    return dtypes.float32

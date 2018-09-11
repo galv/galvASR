@@ -26,6 +26,13 @@ REGISTER_OP("KaldiInt32VectorDataset")
   .SetShapeFn(shape_inference::ScalarShape)
   .Doc(R"doc(blah)doc");
 
+REGISTER_OP("KaldiWaveDataset")
+  .Input("r_specifier: string")
+  .Output("handle: variant")
+  .SetIsStateful()
+  .SetShapeFn(shape_inference::ScalarShape)
+  .Doc(R"doc(blah)doc");
+
 }
 
                                                 \

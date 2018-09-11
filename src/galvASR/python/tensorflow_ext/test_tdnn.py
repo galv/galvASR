@@ -65,16 +65,17 @@ def test_rnn_gradients():
     labels = tf.placeholder(tf.int32, shape=(time_steps, batch_size))
     rnn_layers = [tf.nn.rnn_cell.LSTMCell(size) for size in hidden_layer_dims]
     multi_rnn_cell = tf.nn.rnn_cell.MultiRNNCell(rnn_layers)
-    rnn = tf.nn.dynamic_rnn(cell=multi_rnn_cell,
-                            inputs=features,
-                            time_major=True,
-                            dtype=features.dtype)
+    outputs, _ = tf.nn.dynamic_rnn(cell=multi_rnn_cell,
+                                   inputs=features,
+                                   time_major=True,
+                                   dtype=features.dtype)
     W = tf.get_variable("W_hidden_to_output", [hidden_layer_dims[-1], num_labels])
-    logits = rnn[-1].outputs @ W
+    # This version of logits is missing the time dimension. Ugh.
+    logits = tf.tensordot(outputs, W, 1)
+    print(logits.shape)
     loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
     grads = tf.gradients(loss, g.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
-    print("Gradients", grads)
-    print("Variables", g.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+    assert len(grads) > 0
 
 
 # def test_tdnn_gradients():

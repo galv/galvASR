@@ -101,3 +101,5 @@ MANIFEST-*
 /dist
 /*.egg-info
 /setup-py-build
+
+_skbuild/

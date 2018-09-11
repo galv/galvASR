@@ -173,6 +173,10 @@ def main(argv):
       'exp/tri3/graph_tgsmall'
     ])
 
+
+  if FLAGS.stage <= 10:
+    pass
+
   if FLAGS.stage <= 10:
     call_local('chain/run_tdnn.sh', ['--stage', '0', '--gmm', 'tri3'])
 
