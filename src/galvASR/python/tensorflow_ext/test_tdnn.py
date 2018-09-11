@@ -30,21 +30,51 @@ def test_tdnn():
   model.predict(input_fn=train_input_fn)
 
 
-# def test_tdnn_graph_creation():
-#   batch_size = 16
-#   time_steps = 20
-#   input_feature_size = 40
-#   features = tf.placeholder(tf.float32, (time_steps, batch_size, input_feature_size))
-#   params = {
-#     'hidden_layer_dims': [512],
-#     'layer_splice_indices': [[-2, 0, 2], [-2, 0, 2]],
-#     'num_labels': 64,
-#     'learning_rate': 1e-5
-#   }
-#   tdnn.dynamic_tdnn(features, params)
-#   with tf.Session() as sess:
-#     writer = tf.summary.FileWriter("abc", sess.graph)
-#     writer.close()
+def test_tdnn_graph_creation():
+  batch_size = 16
+  time_steps = 20
+  input_feature_size = 40
+  params = {
+    'hidden_layer_dims': [512],
+    'layer_splice_indices': [[-2, 0, 2], [-2, 0, 2]],
+    'num_labels': 64,
+    'learning_rate': 1e-5
+  }
+  g = tf.Graph()
+  with g.as_default():
+    features = tf.placeholder(tf.float32, (time_steps, batch_size, input_feature_size))
+    labels = tf.placeholder(tf.int32, shape=(time_steps, batch_size))
+    logits = tdnn.dynamic_tdnn(features, params)
+    loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+    grads = tf.gradients(loss, g.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+    print("Gradients", grads)
+    print("Variables", g.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+  writer = tf.summary.FileWriter("abc", g)
+  writer.close()
+
+
+def test_rnn_gradients():
+  batch_size = 16
+  time_steps = 20
+  input_feature_size = 40
+  hidden_layer_dims = [512, 512]
+  num_labels = 64
+  g = tf.Graph()
+  with g.as_default():
+    features = tf.placeholder(tf.float32, (time_steps, batch_size, input_feature_size))
+    labels = tf.placeholder(tf.int32, shape=(time_steps, batch_size))
+    rnn_layers = [tf.nn.rnn_cell.LSTMCell(size) for size in hidden_layer_dims]
+    multi_rnn_cell = tf.nn.rnn_cell.MultiRNNCell(rnn_layers)
+    rnn = tf.nn.dynamic_rnn(cell=multi_rnn_cell,
+                            inputs=features,
+                            time_major=True,
+                            dtype=features.dtype)
+    W = tf.get_variable("W_hidden_to_output", [hidden_layer_dims[-1], num_labels])
+    logits = rnn[-1].outputs @ W
+    loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+    grads = tf.gradients(loss, g.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+    print("Gradients", grads)
+    print("Variables", g.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
 
 
 # def test_tdnn_gradients():
@@ -71,34 +101,34 @@ def test_tdnn():
 #     writer.close()
 
 
-def test_small_tdnn_gradients():
-  batch_size = 16
-  time_steps = 20
-  input_feature_size = 40
-  features = tf.placeholder(tf.float32, (time_steps, batch_size, input_feature_size))
-  params = {
-    'hidden_layer_dims': [],
-    'layer_splice_indices': [[-2, 0, 2]],
-    'num_labels': 64,
-    'learning_rate': 1e-5
-  }
-  logits = tdnn.dynamic_tdnn(features, params)
-  labels = np.random.randint(0, params['num_labels'],
-                             size=(time_steps, batch_size)).astype(np.int32)
-  one_hot_labels = tf.one_hot(labels, params['num_labels'])
-  loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits)
-  # loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=one_hot_labels,
-  #                                                  logits=logits)
-  # optimizer = tf.train.AdagradOptimizer(params['learning_rate'])
-  # print("Gradients: ", optimizer.compute_gradients(loss))
-  # train_op = optimizer.minimize(loss, tf.train.get_or_create_global_step())
-  # grads = tf.gradients(loss, tf.trainable_variables())
+# def test_small_tdnn_gradients():
+#   batch_size = 16
+#   time_steps = 20
+#   input_feature_size = 40
+#   features = tf.placeholder(tf.float32, (time_steps, batch_size, input_feature_size))
+#   params = {
+#     'hidden_layer_dims': [],
+#     'layer_splice_indices': [[-2, 0, 2]],
+#     'num_labels': 64,
+#     'learning_rate': 1e-5
+#   }
+#   logits = tdnn.dynamic_tdnn(features, params)
+#   labels = np.random.randint(0, params['num_labels'],
+#                              size=(time_steps, batch_size)).astype(np.int32)
+#   one_hot_labels = tf.one_hot(labels, params['num_labels'])
+#   loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits)
+#   # loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=one_hot_labels,
+#   #                                                  logits=logits)
+#   # optimizer = tf.train.AdagradOptimizer(params['learning_rate'])
+#   # print("Gradients: ", optimizer.compute_gradients(loss))
+#   # train_op = optimizer.minimize(loss, tf.train.get_or_create_global_step())
+#   # grads = tf.gradients(loss, tf.trainable_variables())
 
-  from tensorflow.python.framework.ops import get_gradient_function
-  for op in tf.get_default_graph().get_operations():
-    if get_gradient_function(op) is None:
-      print("Offending op: {}".format(op))
+#   from tensorflow.python.framework.ops import get_gradient_function
+#   for op in tf.get_default_graph().get_operations():
+#     if get_gradient_function(op) is None:
+#       print("Offending op: {}".format(op))
 
-  with tf.Session() as sess:
-    writer = tf.summary.FileWriter("abc_simple", sess.graph)
-    writer.close()
+#   with tf.Session() as sess:
+#     writer = tf.summary.FileWriter("abc_simple", sess.graph)
+#     writer.close()

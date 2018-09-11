@@ -1,4 +1,9 @@
-set(CMAKE_CXX_FLAGS "-Wl,--no-undefined")
+# Ideally, we'd use this, but unfortunately we cannot link to
+# libtensorflow_framework.so directly, since that would cause
+# libtensorflow_framework.so to be loaded twice, which would
+# cause ops to be registered twice.
+#set(CMAKE_CXX_FLAGS "-Wl,--no-undefined")
+
 add_definitions(${KALDI_DEFINES} ${TENSORFLOW_DEFINES})
 include_directories(${KALDI_INCLUDE_DIRS} ${TENSORFLOW_INCLUDE_DIRS})
 
@@ -22,13 +27,15 @@ add_library(
 # We could generate the BUILD file right here. And make a custom
 # target of gen_kaldi_table_dataset.py. That sounds pretty okay.
 
-add_custom_command(OUTPUT gen_kaldi_table_dataset.py
-  COMMAND bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --host_cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --verbose_failures -s --define grpc_no_ares=true --action_env OP_LIB="${CMAKE_CURRENT_BINARY_DIR}/libtensorflow_ext_op_lib.a"  //src/galvASR/python/tensorflow_ext:kaldi_table_dataset
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  DEPENDS tensorflow_ext_op_lib
-  )
+# Warning: This is broken right now. Settle for copy-pasting the
+# output file gen_kaldi_table_dataset.py for now.
+# add_custom_command(OUTPUT gen_kaldi_table_dataset.py
+#   COMMAND bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --host_cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --verbose_failures -s --define grpc_no_ares=true --action_env OP_LIB="${CMAKE_CURRENT_BINARY_DIR}/libtensorflow_ext_op_lib.a"  //src/galvASR/python/tensorflow_ext:kaldi_table_dataset
+#   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+#   DEPENDS tensorflow_ext_op_lib
+#   )
 
-add_custom_target(dummy_target ALL
-  DEPENDS gen_kaldi_table_dataset.py
-  )
+# add_custom_target(dummy_target ALL
+#   DEPENDS gen_kaldi_table_dataset.py
+#   )
 

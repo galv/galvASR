@@ -2,6 +2,7 @@ from functools import partial
 
 import tensorflow as tf
 
+
 # Note that this unfortunately requires that timesteps by run in
 # sequence. loop_vars=1 necessarily
 def _body(t, next_layer_ta, previous_layer, hidden_layer_dim, splice_indices, layer_index):
@@ -71,10 +72,10 @@ def tdnn_model_fn_with_cross_entropy(features, labels, mode, params):
       print("Assigning previous_layer")
       previous_layer = tf.nn.relu(next_layer)
 
-    predictions = {
-      "classes": tf.argmax(logits, axis=1),
-      "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
-    }
+  predictions = {
+    "classes": tf.argmax(logits, axis=1),
+    "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+  }
 
   if mode == tf.estimator.ModeKeys.TRAIN:
     optimizer = tf.train.AdagradOptimizer(params['learning_rate'])
@@ -87,7 +88,7 @@ def tdnn_model_fn_with_cross_entropy(features, labels, mode, params):
     #     print("Offending op: {}".format(op))
 
     return tf.estimator.EstimatorSpec(
-      mode=tf.estimator.ModeKeys.TRAIN,
+      mode=mode,
       loss=loss,
       train_op=optimizer.minimize(loss, tf.train.get_or_create_global_step()))
   elif mode == tf.estimator.ModeKeys.PREDICT:
