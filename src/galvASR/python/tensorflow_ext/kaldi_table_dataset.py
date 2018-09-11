@@ -1,9 +1,13 @@
+import os
+
 import tensorflow as tf
 from tensorflow.python.data.ops.dataset_ops import Dataset
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import tensor_shape
 
-from galvASR.python.tensorflow_ext._gen_dataset_ops import kaldi_table_dataset_with_op_name
+_op_lib = tf.load_op_library(
+  os.path.join(os.path.dirname(os.path.realpath(__file__)),
+               'libtensorflow_ext.so'))
 
 
 class KaldiFloat32MatrixDataset(Dataset):
@@ -12,7 +16,7 @@ class KaldiFloat32MatrixDataset(Dataset):
     self._r_specifier = r_specifier
 
   def _as_variant_tensor(self):
-    return kaldi_table_dataset_with_op_name("KaldiFloat32MatrixDataset", self._r_specifier)
+    return _op_lib.kaldi_float32_matrix_dataset(self._r_specifier)
 
   @property
   def output_classes(self):
@@ -33,7 +37,7 @@ class KaldiFloat32VectorDataset(Dataset):
     self._r_specifier = r_specifier
 
   def _as_variant_tensor(self):
-    return kaldi_table_dataset_with_op_name("KaldiFloat32VectorDataset", self._r_specifier)
+    return _op_lib.kaldi_float32_vector_dataset(self._r_specifier)
 
   @property
   def output_classes(self):
@@ -54,7 +58,7 @@ class KaldiInt32VectorDataset(Dataset):
     self._r_specifier = r_specifier
 
   def _as_variant_tensor(self):
-    return kaldi_table_dataset_with_op_name("KaldiInt32VectorDataset", self._r_specifier)
+    return _op_lib.kaldi_int32_vector_dataset(self._r_specifier)
 
   @property
   def output_classes(self):
