@@ -99,7 +99,9 @@ MANIFEST-*
 # Python setuptools cruft
 /.eggs
 /dist
-/*.egg-info
+/*.egg-info/
+src/*.egg-info/
 /setup-py-build
+.pytest_cache/
 
 _skbuild/
