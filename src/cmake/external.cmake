@@ -62,7 +62,7 @@ if(NOT DEFINED WITH_EXTERNAL_KALDI)
   ExternalProject_Add_Step(kaldi install_tools
     WORKING_DIRECTORY ${kaldi_PREFIX}/tools
     # COMMAND make clean || exit 0
-    COMMAND PYTHON=${PYTHON_EXECUTABLE} make OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ --enable-python CXXFLAGS=-fPIC
+    COMMAND make OPENFST_CONFIGURE=--enable-static\ --enable-shared\ --enable-far\ --enable-ngram-fsts\ CXXFLAGS=-fPIC
     COMMAND extras/install_irstlm.sh
     COMMAND extras/install_pocolm.sh
     DEPENDERS configure
@@ -76,7 +76,7 @@ file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.a)
 # We should really install this regardless of whether galvASR is being
 # installed. Best to factor openfst out into its own
 # "ExternalProject_Add" separate from Kaldi.
-file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python3*/site-packages/pywrapfst.so")
+# file(GLOB PYWRAPFST_SO "${kaldi_PREFIX}/tools/openfst/lib/python3*/site-packages/pywrapfst.so")
 # install(FILES "${PYWRAPFST_SO}"
 #   DESTINATION "${full_python_site_packages}")
 
@@ -97,9 +97,9 @@ set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${KALDI_LIBRARIES})
 set(KALDI_LIBRARIES ${KALDI_LIBRARIES} ${OPENFST_LIBRARIES}
   # HACK: Would be better to query the required BLAS and LAPACK
   # libraries from Kaldi directly. Do it by grepping "ATLASLIBS" in kaldi.mk
-  /usr/lib/liblapack_atlas.a /usr/lib/libcblas.a /usr/lib/libatlas.a /usr/lib/libf77blas.a
-  # /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3
-  # /usr/lib/liblapack_atlas.so.3
+  # /usr/lib/liblapack_atlas.a /usr/lib/libcblas.a /usr/lib/libatlas.a /usr/lib/libf77blas.a
+  /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3
+  /usr/lib/liblapack_atlas.so.3
   )
 
 # Optional packages: Caffe2, Tensorflow

@@ -26,7 +26,8 @@ except ValueError:
   assert len(details.split('-')) == 1
   version_tag = details
   commits_since_tag = 0
-  current_hash = subprocess.check_output(shlex.split('git rev-parse --short HEAD')).decode('ascii').strip()
+  current_hash = subprocess.check_output(
+    shlex.split('git rev-parse --short HEAD')).decode('ascii').strip()
 
 assert re.match(r'^\d[.]\d[.]\d$', version_tag), 'Malformed version tag'
 current_hash = current_hash + '.dirty' if is_dirty else current_hash
@@ -41,13 +42,12 @@ pytest_runner = (['pytest-runner>=2.0,<3dev']
 
 setup_requires = pytest_runner
 
-setup(
-  name='galvASR',
-  version=version,
-  description='Daniel Galvez\'s Automatic Speech Recognition Library',
-  packages=find_packages('src', include=['galvASR', 'galvASR.*']),
-  package_dir={'': 'src'},
-  cmake_args=['-DWITH_EXTERNAL_KALDI=third_party/kaldi/kaldi', '-DUSE_TENSORFLOW=YES'],
-  tests_require=['pytest'],
-  setup_requires=setup_requires
-)
+setup(name='galvASR',
+      version=version,
+      description='Daniel Galvez\'s Automatic Speech Recognition Library',
+      packages=find_packages('src', include=['galvASR', 'galvASR.*']),
+      package_dir={'': 'src'},
+      cmake_args=['-DWITH_EXTERNAL_KALDI=third_party/kaldi/kaldi',
+                  '-DUSE_TENSORFLOW=YES'],
+      tests_require=['pytest'],
+      setup_requires=setup_requires)

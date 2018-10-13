@@ -54,7 +54,7 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
     }
 
     const DataTypeVector& output_dtypes() const override {
-      static DataTypeVector* dtypes = new DataTypeVector({TFData<Holder>::dt});
+      static DataTypeVector* dtypes = new DataTypeVector({DT_STRING, TFData<Holder>::dt});
       return *dtypes;
     }
 
@@ -63,7 +63,11 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
       // hold ::shape to force the compiler to make a symbol that it
       // can link to, even though this compile-time constant could be inlined.
       static auto shape_array = TFData<Holder>::shape;
-      static std::vector<PartialTensorShape>* shapes = new std::vector<PartialTensorShape>({PartialTensorShape(gtl::ArraySlice<tensorflow::int64>(shape_array))});
+      static std::vector<PartialTensorShape>* shapes =
+        new std::vector<PartialTensorShape>({
+            PartialTensorShape(gtl::ArraySlice<tensorflow::int64>(std::array<tensorflow::int64, 0>{{}})),
+              PartialTensorShape(gtl::ArraySlice<tensorflow::int64>(shape_array))
+              });
       return *shapes;
     }
 
@@ -112,6 +116,9 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
         if (reader_.Done()) { *end_of_sequence = true; return Status::OK(); }
 
         try {
+          Tensor key(DT_STRING, TensorShape({}));
+          key.scalar<std::string>()() = reader_.Key();
+          out_tensors->emplace_back(std::move(key));
           out_tensors->emplace_back(std::move(getValueAsTensor(&reader_.Value(), TFData<Holder>::type)));
         } catch (const kaldi_error& exception) {
           std::stringstream sstr;

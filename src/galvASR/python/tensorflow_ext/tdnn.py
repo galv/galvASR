@@ -87,10 +87,9 @@ def tdnn_model_fn_with_cross_entropy(features, labels, mode, params):
     #   if get_gradient_function(op) is None:
     #     print("Offending op: {}".format(op))
 
-    return tf.estimator.EstimatorSpec(
-      mode=mode,
-      loss=loss,
-      train_op=optimizer.minimize(loss, tf.train.get_or_create_global_step()))
+    return tf.estimator.EstimatorSpec(mode=mode,
+                                      loss=loss,
+                                      train_op=optimizer.minimize(loss, tf.train.get_or_create_global_step()))
   elif mode == tf.estimator.ModeKeys.PREDICT:
     return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 

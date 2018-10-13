@@ -20,15 +20,16 @@ class KaldiFloat32MatrixDataset(Dataset):
 
   @property
   def output_classes(self):
-    return tf.Tensor
+    return tf.Tensor, tf.Tensor
 
   @property
   def output_shapes(self):
-    return tensor_shape.TensorShape([None, None])
+    return (tensor_shape.TensorShape([]),
+            tensor_shape.TensorShape([None, None]))
 
   @property
   def output_types(self):
-    return dtypes.float32
+    return dtypes.string, dtypes.float32
 
 
 class KaldiFloat32VectorDataset(Dataset):
@@ -41,15 +42,16 @@ class KaldiFloat32VectorDataset(Dataset):
 
   @property
   def output_classes(self):
-    return tf.Tensor
+    return tf.Tensor, tf.Tensor
 
   @property
   def output_shapes(self):
-    return tensor_shape.TensorShape([None])
+    return  (tensor_shape.TensorShape([]),
+             tensor_shape.TensorShape([None]))
 
   @property
   def output_types(self):
-    return dtypes.float32
+    return dtypes.string, dtypes.float32
 
 
 class KaldiInt32VectorDataset(Dataset):
@@ -62,15 +64,16 @@ class KaldiInt32VectorDataset(Dataset):
 
   @property
   def output_classes(self):
-    return tf.Tensor
+    return tf.Tensor, tf.Tensor
 
   @property
   def output_shapes(self):
-    return tensor_shape.TensorShape([None])
+    return (tensor_shape.TensorShape([]),
+            tensor_shape.TensorShape([None]))
 
   @property
   def output_types(self):
-    return dtypes.int32
+    return dtypes.string, dtypes.int32
 
 
 class KaldiWaveDataset(Dataset):
@@ -83,12 +86,13 @@ class KaldiWaveDataset(Dataset):
 
   @property
   def output_classes(self):
-    return tf.Tensor
+    return tf.Tensor, tf.Tensor
 
   @property
   def output_shapes(self):
-    return tensor_shape.TensorShape([None, None])
+    return (tensor_shape.TensorShape([]),
+            tensor_shape.TensorShape([None, None]))
 
   @property
   def output_types(self):
-    return dtypes.float32
+    return dtypes.string, dtypes.float32
