@@ -42,10 +42,16 @@ class KaldiTableDatasetOp : public DatasetOpKernel {
   }
 
  private:
-  class Dataset : public GraphDatasetBase {
+  class Dataset : public DatasetBase {
    public:
     Dataset(OpKernelContext* ctx, const string& r_specifier)
-      : GraphDatasetBase(ctx), r_specifier_(r_specifier) { }
+      : DatasetBase(DatasetContext(ctx)), r_specifier_(r_specifier) { }
+
+    Status AsGraphDefInternal(SerializationContext* ctx,
+                              DatasetGraphDefBuilder* b,
+                              Node** node) const override {
+      return errors::Unimplemented("KaldiTableDatasetOp::Dataset does not support 'AsGraphDefInternal'");
+    }
 
     std::unique_ptr<IteratorBase> MakeIteratorInternal(
         const string& prefix) const override {

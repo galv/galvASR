@@ -29,6 +29,39 @@ def test_tdnn():
   # model.train(input_fn=train_input_fn)
   model.predict(input_fn=train_input_fn)
 
+def test_tdnn_conv1d():
+  params = {
+    'hidden_layer_dims': [512],
+    'num_splices': [3, 3],
+    'dilations': [2, 2],
+    'num_labels': 64,
+    'learning_rate': 1e-5
+  }
+  model = tf.estimator.Estimator(tdnn.conv1d_tdnn, params=params)
+
+  total_context = sum([(num_splice - 1) * dilation
+                       for num_splice, dilation
+                       in zip(params['num_splices'], params['dilations'])])
+
+  batch_size = 16
+  time_steps = 20
+  input_feature_size = 40
+  x = (np.random.normal(size=(batch_size, time_steps + total_context, input_feature_size))
+       .astype(np.float32))
+  y = np.random.randint(0, params['num_labels'],
+                        size=(batch_size, time_steps)).astype(np.int32)
+  # dataset = tf.data.Dataset.from_tensor_slices((x, y)).batch(time_steps)
+  # iterator = dataset.make_one_shot_iterator()
+  # input_fn = lambda : iterator.get_next()
+  input_fn = tf.estimator.inputs.numpy_input_fn(x=x, y=y,
+                                                batch_size=time_steps,
+                                                num_epochs=1,
+                                                shuffle=False)
+
+  # How do estimators call tf.global_variables_initializer()?
+  model.train(input_fn=input_fn)
+  for prediction in model.predict(input_fn=input_fn):
+    print(prediction)
 
 def test_tdnn_graph_creation():
   batch_size = 16
