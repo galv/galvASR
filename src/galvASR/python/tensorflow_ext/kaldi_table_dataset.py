@@ -5,11 +5,13 @@ from tensorflow.python.data.ops.dataset_ops import Dataset
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import tensor_shape
 
-_op_lib = tf.load_op_library(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                          'libtensorflow_ext.so'))
+_op_lib = tf.load_op_library(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), 'libtensorflow_ext.so'))
 
 
 class KaldiFloat32MatrixDataset(Dataset):
+
   def __init__(self, r_specifier):
     super(KaldiFloat32MatrixDataset, self).__init__()
     self._r_specifier = r_specifier
@@ -26,8 +28,8 @@ class KaldiFloat32MatrixDataset(Dataset):
 
   @property
   def output_shapes(self):
-    return (tensor_shape.TensorShape([]),
-            tensor_shape.TensorShape([None, None]))
+    return (tensor_shape.TensorShape([]), tensor_shape.TensorShape([None,
+                                                                    None]))
 
   @property
   def output_types(self):
@@ -35,6 +37,7 @@ class KaldiFloat32MatrixDataset(Dataset):
 
 
 class KaldiFloat32VectorDataset(Dataset):
+
   def __init__(self, r_specifier):
     super(KaldiFloat32VectorDataset, self).__init__()
     self._r_specifier = r_specifier
@@ -51,8 +54,7 @@ class KaldiFloat32VectorDataset(Dataset):
 
   @property
   def output_shapes(self):
-    return  (tensor_shape.TensorShape([]),
-             tensor_shape.TensorShape([None]))
+    return (tensor_shape.TensorShape([]), tensor_shape.TensorShape([None]))
 
   @property
   def output_types(self):
@@ -60,6 +62,7 @@ class KaldiFloat32VectorDataset(Dataset):
 
 
 class KaldiInt32VectorDataset(Dataset):
+
   def __init__(self, r_specifier):
     super(KaldiInt32VectorDataset, self).__init__()
     self._r_specifier = r_specifier
@@ -76,8 +79,7 @@ class KaldiInt32VectorDataset(Dataset):
 
   @property
   def output_shapes(self):
-    return (tensor_shape.TensorShape([]),
-            tensor_shape.TensorShape([None]))
+    return (tensor_shape.TensorShape([]), tensor_shape.TensorShape([None]))
 
   @property
   def output_types(self):
@@ -85,6 +87,7 @@ class KaldiInt32VectorDataset(Dataset):
 
 
 class KaldiWaveDataset(Dataset):
+
   def __init__(self, r_specifier):
     super(KaldiWaveDataset, self).__init__()
     self._r_specifier = r_specifier
@@ -101,8 +104,8 @@ class KaldiWaveDataset(Dataset):
 
   @property
   def output_shapes(self):
-    return (tensor_shape.TensorShape([]),
-            tensor_shape.TensorShape([None, None]))
+    return (tensor_shape.TensorShape([]), tensor_shape.TensorShape([None,
+                                                                    None]))
 
   @property
   def output_types(self):
@@ -113,13 +116,12 @@ def key_func(data):
   string_key = data[0]
   return tf.strings.to_hash_bucket_fast(string_key)
 
-def reduce_func():
-  pass
-
 
 WINDOW_SIZE = 2
 
+
 def reduce_func(key, same_key_dataset):
+  # pylint: disable=unused-variable
   features = same_key_dataset[0][1]
   label = same_key_dataset[0][2]
   assert key.dtype == tf.int64

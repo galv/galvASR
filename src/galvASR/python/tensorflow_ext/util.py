@@ -13,7 +13,7 @@ Returns:
   False if a and b are guaranteed not to be the same dimension. Otherwise True.
   """
   if a == tf.Dimension(None) or b == tf.Dimension(None):
-    # Not enough information to decide. Return True 
+    # Not enough information to decide. Return True
     return True
   else:
     return a == b

@@ -30,7 +30,7 @@ def _parse_tools_env_sh_if_exists(env_sh_file_name):
         expression = match.group(2).replace('$', '')
         os.environ[env_var] = expression.format(**os.environ)
       else:
-        logging.warn('Unknown line in tools/env.sh: {0}'.format(line))
+        log.warning('Unknown line in tools/env.sh: %s', line)
 
 
 def setup_environment():
@@ -40,8 +40,8 @@ def setup_environment():
     raise ValueError('KALDI_ROOT is not pointing to a Kaldi repo!')
   for env_variable in ('KALDI_ROOT', 'OPENFST_ROOT'):
     if not os.path.isabs(os.environ[env_variable]):
-      raise ValueError('{0} is not an absolute path. Instead, {1}'.
-                       format(env_variable, os.environ[env_variable]))
+      raise ValueError('{0} is not an absolute path. Instead, {1}'.format(
+          env_variable, os.environ[env_variable]))
 
   env_sh = os.path.join(os.environ['KALDI_ROOT'], 'tools/env.sh')
   _parse_tools_env_sh_if_exists(env_sh)
@@ -73,7 +73,8 @@ def setup_environment():
   # Add utils/ to path directly for historical reasons.
   # https://github.com/kaldi-asr/kaldi/issues/2058
   # Prefer to make calls with the utils/ prefix, though.
-  os.environ['PATH'] = "{KALDI_ROOT}/egs/wsj/s5/utils/:{PATH}".format(**os.environ)
+  os.environ['PATH'] = "{KALDI_ROOT}/egs/wsj/s5/utils/:{PATH}".format(
+      **os.environ)
 
   # Search for "LC_ALL" in http://kaldi-asr.org/doc/data_prep.html
   # for a discussion of the importance of this environment variable.
@@ -120,12 +121,11 @@ def load_utils_and_steps():
     os.symlink('{KALDI_ROOT}/egs/wsj/s5/utils'.format(**os.environ), utils)
   with open(path_sh, 'w+'), open(cmd_sh, 'w+'):
     # Some legacy kaldi scripts insist upon loading path.sh in the
-    # current workind directory, though this is wholly unnecessary
+    # current working directory, though this is wholly unnecessary
     # since it's a precondition to calling those scripts that the
     # environment is set up correctly. setup_environment()
     # alreadys sets up the environment variables as path.sh would,
     # so we just create an empty file. Same goes for cmd.sh
-    pass
     try:
       yield
     finally:

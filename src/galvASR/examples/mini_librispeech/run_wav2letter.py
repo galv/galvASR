@@ -22,7 +22,8 @@ flags.DEFINE_string('train_data_dir', 'data/train_clean_5', None)
 flags.DEFINE_string('validate_data_dir', 'data/dev_clean_2', None)
 flags.DEFINE_string('work_dir', 'exp/wav2letter', None)
 flags.DEFINE_string('repeat_letter', '2', None)
-flags.DEFINE_integer('self_transition_prob', 0.5, None, lower_bound=0.0, upper_bound=1.0)
+flags.DEFINE_integer(
+    'self_transition_prob', 0.5, None, lower_bound=0.0, upper_bound=1.0)
 
 flags.DEFINE_integer('batch_size', 16, None)
 flags.DEFINE_integer('num_repeats', 1, None)
@@ -47,10 +48,12 @@ def main(argv):
   with open(os.path.join(FLAGS.lang_dir, 'oov.txt')) as oov_fh:
     oov = oov_fh.read().strip()
   if FLAGS.stage <= 1:
-    results = subprocess.run(["utils/sym2int.pl", "--map-oov", oov, "-f", "2-",
-                              "<", words_txt,
-                              os.path.join(FLAGS.train_data_dir, 'text')],
-                             stdout=subprocess.PIPE, check=True,
+    results = subprocess.run([
+        "utils/sym2int.pl", "--map-oov", oov, "-f", "2-", "<", words_txt,
+        os.path.join(FLAGS.train_data_dir, 'text')
+    ],
+                             stdout=subprocess.PIPE,
+                             check=True,
                              universal_newlines=True)
     openfst.FarWriter()
     for line in results.stdout:
@@ -62,15 +65,13 @@ def main(argv):
   os.makedirs(neural_net_dir, exist_ok=True)
   if FLAGS.stage <= 2:
     input_dataset = kaldi_table_dataset.KaldiFloat32MatrixDataset(
-      "scp:" + os.path.join(FLAGS.train_data_dir, 'feats.scp'))
-    label_dataset = kaldi_table_dataset.KaldiInt32VectorDataset(
-      " ".join("ark:utils/sym2int.pl", "--map-oov", oov, "-f", "2-", "<",
-               words_txt, os.path.join(FLAGS.train_data_dir, 'text'), "|"))
-    dataset = (tf.data.Dataset.zip((input_dataset, label_dataset))
-               .batch(FLAGS.batch_size)
-               .repeat(FLAGS.num_repeats)
-               )
-    
+        "scp:" + os.path.join(FLAGS.train_data_dir, 'feats.scp'))
+    label_dataset = kaldi_table_dataset.KaldiInt32VectorDataset(" ".join(
+        "ark:utils/sym2int.pl", "--map-oov", oov, "-f", "2-", "<", words_txt,
+        os.path.join(FLAGS.train_data_dir, 'text'), "|"))
+    dataset = (tf.data.Dataset.zip((input_dataset, label_dataset)).batch(
+        FLAGS.batch_size).repeat(FLAGS.num_repeats))
+
 
 if __name__ == '__main__':
   kaldi_environment.setup_environment()

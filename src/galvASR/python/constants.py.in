@@ -1,3 +1,5 @@
+#pylint:skip-file
+
 KALDI_ROOT = "@kaldi_PREFIX@"
 OPENFST_ROOT = "@openfst_PREFIX@"
 HTK_ROOT = "@htk_PREFIX@" if "@htk_PREFIX@" != "" else None

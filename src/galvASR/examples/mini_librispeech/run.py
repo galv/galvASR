@@ -41,138 +41,137 @@ def main(argv):
   if FLAGS.stage <= 2:
     for part in ('dev-clean-2', 'train-clean-5'):
       call_local('data_prep.sh', [
-        os.path.join(FLAGS.raw_data_dir, 'LibriSpeech', part),
-        os.path.join(FLAGS.kaldi_data_dir, part.replace('-', '_'))
+          os.path.join(FLAGS.raw_data_dir, 'LibriSpeech', part),
+          os.path.join(FLAGS.kaldi_data_dir, part.replace('-', '_'))
       ])
 
     call_local('prepare_dict.sh', [
-      '--stage', '3',
-      os.path.join(FLAGS.kaldi_data_dir, 'local', 'lm'),
-      os.path.join(FLAGS.kaldi_data_dir, 'local', 'lm'),
-      os.path.join(FLAGS.kaldi_data_dir, 'local', 'dict_nosp')
+        '--stage', '3',
+        os.path.join(FLAGS.kaldi_data_dir, 'local', 'lm'),
+        os.path.join(FLAGS.kaldi_data_dir, 'local', 'lm'),
+        os.path.join(FLAGS.kaldi_data_dir, 'local', 'dict_nosp')
     ])
     subprocess.check_call([
-      'utils/prepare_lang.sh',
-      os.path.join(FLAGS.kaldi_data_dir, 'local', 'dict_nosp'),
-      FLAGS.oov_symbol,
-      os.path.join(FLAGS.kaldi_data_dir, 'local', 'lang_tmp_nosp'),
-      os.path.join(FLAGS.kaldi_data_dir, 'lang_nosp')
+        'utils/prepare_lang.sh',
+        os.path.join(FLAGS.kaldi_data_dir, 'local', 'dict_nosp'),
+        FLAGS.oov_symbol,
+        os.path.join(FLAGS.kaldi_data_dir, 'local', 'lang_tmp_nosp'),
+        os.path.join(FLAGS.kaldi_data_dir, 'lang_nosp')
     ])
     call_local('format_lms.sh', [
-      '--src-dir',
-      os.path.join(FLAGS.kaldi_data_dir, 'lang_nosp'),
-      os.path.join(FLAGS.kaldi_data_dir, 'local', 'lm')
+        '--src-dir',
+        os.path.join(FLAGS.kaldi_data_dir, 'lang_nosp'),
+        os.path.join(FLAGS.kaldi_data_dir, 'local', 'lm')
     ])
     subprocess.check_call([
-      'utils/build_const_arpa_lm.sh', 'data/local/lm/lm_tglarge.arpa.gz',
-      'data/lang_nosp', 'data/lang_nosp_test_tglarge'
+        'utils/build_const_arpa_lm.sh', 'data/local/lm/lm_tglarge.arpa.gz',
+        'data/lang_nosp', 'data/lang_nosp_test_tglarge'
     ])
 
   if FLAGS.stage <= 3:
     with kaldi_environment.load_local(mini_librispeech_kaldi_dir):
       for part in ('dev_clean_2', 'train_clean_5'):
         subprocess.check_call([
-          'steps/make_mfcc.sh', '--cmd', os.environ['train_cmd'], '--nj', nj,
-          os.path.join(FLAGS.kaldi_data_dir, part),
-          os.path.join(FLAGS.work_dir, 'make_mfcc', part),
-          os.path.join(FLAGS.kaldi_data_dir, 'mfcc')
+            'steps/make_mfcc.sh', '--cmd', os.environ['train_cmd'], '--nj', nj,
+            os.path.join(FLAGS.kaldi_data_dir, part),
+            os.path.join(FLAGS.work_dir, 'make_mfcc', part),
+            os.path.join(FLAGS.kaldi_data_dir, 'mfcc')
         ])
         subprocess.check_call([
-          'steps/compute_cmvn_stats.sh',
-          os.path.join(FLAGS.kaldi_data_dir, part),
-          os.path.join(FLAGS.work_dir, 'make_mfcc', part),
-          os.path.join(FLAGS.kaldi_data_dir, 'mfcc')
+            'steps/compute_cmvn_stats.sh',
+            os.path.join(FLAGS.kaldi_data_dir, part),
+            os.path.join(FLAGS.work_dir, 'make_mfcc', part),
+            os.path.join(FLAGS.kaldi_data_dir, 'mfcc')
         ])
         subprocess.check_call([
-          'utils/subset_data_dir.sh', '--shortest', 'data/train_clean_5', '500',
-          'data/train_500short'
+            'utils/subset_data_dir.sh', '--shortest', 'data/train_clean_5',
+            '500', 'data/train_500short'
         ])
 
   # TODO: use work_dir everywhere here!
   if FLAGS.stage <= 4:
     subprocess.check_call([
-      'steps/train_mono.sh', '--boost-silence', '1.25', '--nj', nj, '--cmd',
-      os.environ['train_cmd'], 'data/train_500short', 'data/lang_nosp',
-      'exp/mono'
+        'steps/train_mono.sh', '--boost-silence', '1.25', '--nj', nj, '--cmd',
+        os.environ['train_cmd'], 'data/train_500short', 'data/lang_nosp',
+        'exp/mono'
     ])
 
     subprocess.check_call([
-      'steps/align_si.sh', '--boost-silence', '1.25', '--nj', nj, '--cmd',
-      os.environ['train_cmd'], 'data/train_clean_5', 'data/lang_nosp',
-      'exp/mono', 'exp/mono_ali_train_clean_5'
+        'steps/align_si.sh', '--boost-silence', '1.25', '--nj', nj, '--cmd',
+        os.environ['train_cmd'], 'data/train_clean_5', 'data/lang_nosp',
+        'exp/mono', 'exp/mono_ali_train_clean_5'
     ])
 
   if FLAGS.stage <= 5:
     subprocess.check_call([
-      'steps/train_deltas.sh', '--boost-silence', '1.25', '--cmd',
-      os.environ['train_cmd'], '2000', '10000', 'data/train_clean_5',
-      'data/lang_nosp', 'exp/mono_ali_train_clean_5', 'exp/tri1'
+        'steps/train_deltas.sh', '--boost-silence', '1.25', '--cmd',
+        os.environ['train_cmd'], '2000', '10000', 'data/train_clean_5',
+        'data/lang_nosp', 'exp/mono_ali_train_clean_5', 'exp/tri1'
     ])
 
     subprocess.check_call([
-      'steps/align_si.sh', '--nj', nj, '--cmd', os.environ['train_cmd'],
-      'data/train_clean_5', 'data/lang_nosp', 'exp/tri1',
-      'exp/tri1_ali_train_clean_5'
+        'steps/align_si.sh', '--nj', nj, '--cmd', os.environ['train_cmd'],
+        'data/train_clean_5', 'data/lang_nosp', 'exp/tri1',
+        'exp/tri1_ali_train_clean_5'
     ])
 
   if FLAGS.stage <= 6:
     subprocess.check_call([
-      'steps/train_lda_mllt.sh', '--cmd', os.environ['train_cmd'],
-      '--splice-opts', '--left-context=3 --right-context=3', '2500', '15000',
-      'data/train_clean_5', 'data/lang_nosp', 'exp/tri1_ali_train_clean_5',
-      'exp/tri2'
+        'steps/train_lda_mllt.sh', '--cmd', os.environ['train_cmd'],
+        '--splice-opts', '--left-context=3 --right-context=3', '2500', '15000',
+        'data/train_clean_5', 'data/lang_nosp', 'exp/tri1_ali_train_clean_5',
+        'exp/tri2'
     ])
 
     subprocess.check_call([
-      'steps/align_si.sh', '--nj', nj, '--cmd', os.environ['train_cmd'],
-      '--use-graphs', 'true', 'data/train_clean_5', 'data/lang_nosp',
-      'exp/tri2', 'exp/tri2_ali_train_clean_5'
+        'steps/align_si.sh', '--nj', nj, '--cmd', os.environ['train_cmd'],
+        '--use-graphs', 'true', 'data/train_clean_5', 'data/lang_nosp',
+        'exp/tri2', 'exp/tri2_ali_train_clean_5'
     ])
 
   if FLAGS.stage <= 7:
     subprocess.check_call([
-      'steps/train_sat.sh', '--cmd', os.environ['train_cmd'], '2500', '15000',
-      'data/train_clean_5', 'data/lang_nosp', 'exp/tri2_ali_train_clean_5',
-      'exp/tri3'
+        'steps/train_sat.sh', '--cmd', os.environ['train_cmd'], '2500', '15000',
+        'data/train_clean_5', 'data/lang_nosp', 'exp/tri2_ali_train_clean_5',
+        'exp/tri3'
     ])
 
   if FLAGS.stage <= 8:
     subprocess.check_call([
-      'steps/get_prons.sh', '--cmd', os.environ['train_cmd'],
-      'data/train_clean_5', 'data/lang_nosp', 'exp/tri3'
+        'steps/get_prons.sh', '--cmd', os.environ['train_cmd'],
+        'data/train_clean_5', 'data/lang_nosp', 'exp/tri3'
     ])
 
     subprocess.check_call([
-      'utils/dict_dir_add_pronprobs.sh', '--max-normalize', 'true',
-      'data/local/dict_nosp', 'exp/tri3/pron_counts_nowb.txt',
-      'exp/tri3/sil_counts_nowb.txt', 'exp/tri3/pron_bigram_counts_nowb.txt',
-      'data/local/dict'
+        'utils/dict_dir_add_pronprobs.sh', '--max-normalize', 'true',
+        'data/local/dict_nosp', 'exp/tri3/pron_counts_nowb.txt',
+        'exp/tri3/sil_counts_nowb.txt', 'exp/tri3/pron_bigram_counts_nowb.txt',
+        'data/local/dict'
     ])
 
     subprocess.check_call([
-      'utils/prepare_lang.sh', 'data/local/dict', FLAGS.oov_symbol,
-      'data/local/lang_tmp', 'data/lang'
+        'utils/prepare_lang.sh', 'data/local/dict', FLAGS.oov_symbol,
+        'data/local/lang_tmp', 'data/lang'
     ])
 
     call_local('format_lms.sh', ['--src-dir', 'data/lang', 'data/local/lm'])
 
     subprocess.check_call([
-      'utils/build_const_arpa_lm.sh', 'data/local/lm/lm_tglarge.arpa.gz',
-      'data/lang', 'data/lang_test_tglarge'
+        'utils/build_const_arpa_lm.sh', 'data/local/lm/lm_tglarge.arpa.gz',
+        'data/lang', 'data/lang_test_tglarge'
     ])
 
     subprocess.check_call([
-      'steps/align_fmllr.sh', '--nj', nj, '--cmd', os.environ['train_cmd'],
-      'data/train_clean_5', 'data/lang', 'exp/tri3',
-      'exp/tri3_ali_train_clean_5'
+        'steps/align_fmllr.sh', '--nj', nj, '--cmd', os.environ['train_cmd'],
+        'data/train_clean_5', 'data/lang', 'exp/tri3',
+        'exp/tri3_ali_train_clean_5'
     ])
 
   if FLAGS.stage <= 9:
     subprocess.check_call([
-      'utils/mkgraph.sh', 'data/lang_test_tgsmall', 'exp/tri3',
-      'exp/tri3/graph_tgsmall'
+        'utils/mkgraph.sh', 'data/lang_test_tgsmall', 'exp/tri3',
+        'exp/tri3/graph_tgsmall'
     ])
-
 
   if FLAGS.stage <= 10:
     pass
