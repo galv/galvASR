@@ -17,4 +17,4 @@ set_property(TARGET tensorflow_ext PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(tensorflow_ext ${KALDI_LIBRARIES} ${TENSORFLOW_LIBRARIES})
 target_link_libraries(tensorflow_ext Threads::Threads)
-install(TARGETS tensorflow_ext LIBRARY DESTINATION "src/galvASR/python/tensorflow_ext")
+install(TARGETS tensorflow_ext LIBRARY DESTINATION "galvASR/python/tensorflow_ext")

@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD 11)
 find_package(PythonExtensions REQUIRED)
 
 set(PROJECT_TOP_DIR ${PROJECT_SOURCE_DIR})
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/src/cmake)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/galvASR/cmake)
 
-include(src/cmake/utils.cmake)
-include(src/cmake/external.cmake)
+include(galvASR/cmake/utils.cmake)
+include(galvASR/cmake/external.cmake)
 
-add_subdirectory(src/galvASR)
+add_subdirectory(galvASR)

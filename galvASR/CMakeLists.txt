@@ -5,11 +5,7 @@ if(USE_TENSORFLOW)
   add_subdirectory(tensorflow_ext)
 endif()
 
-if(USE_CAFFE2)
-  add_subdirectory(caffe2_ext)
-endif()
-
 # Put this into the source directory to make an "editable" install
 # easier later.
-configure_file(${PROJECT_SOURCE_DIR}/src/galvASR/python/constants.py.in
-  ${PROJECT_SOURCE_DIR}/src/galvASR/python/constants.py)
+configure_file(${PROJECT_SOURCE_DIR}/galvASR/python/constants.py.in
+  ${PROJECT_SOURCE_DIR}/galvASR/python/constants.py)

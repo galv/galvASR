@@ -100,7 +100,6 @@ MANIFEST-*
 /.eggs
 /dist
 /*.egg-info/
-src/*.egg-info/
 /setup-py-build
 .pytest_cache/
 

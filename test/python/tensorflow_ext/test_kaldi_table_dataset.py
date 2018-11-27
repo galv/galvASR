@@ -6,8 +6,6 @@ import tensorflow as tf
 import numpy as np
 
 from galvASR.python.tensorflow_ext import kaldi_table_dataset
-from galvASR.python.test_util import serialize_kaldi_text
-
 
 def test_read():
   num_repeats = 2
@@ -52,10 +50,14 @@ def test_merge():
     print(zipped_dataset.output_shapes)
     print(zipped_dataset.output_types)
 
-    # dataset = (
-    #            map()
-    #            )
-    # iterator = dataset.make_one_shot_iterator()
-    # next_element = iterator.get_next()
-    # with tf.Session() as session:
-    #   dataset
+
+# Helpers
+
+def serialize_kaldi_text(array):
+  assert isinstance(array, np.ndarray)
+  assert array.ndim == 1
+  # return str(array).replace("[", "[ ").replace("]", " ]")
+  return str(array).replace("[", "").replace("]", "")
+
+
+
