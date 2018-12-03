@@ -125,3 +125,5 @@ def reduce_func(key, same_key_dataset):
   features = same_key_dataset[0][1]
   label = same_key_dataset[0][2]
   assert key.dtype == tf.int64
+
+kaldi_simple_decoder = _op_lib.kaldi_simple_decoder

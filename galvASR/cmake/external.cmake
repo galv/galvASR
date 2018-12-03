@@ -71,8 +71,8 @@ endif(NOT DEFINED WITH_EXTERNAL_KALDI)
 
 set(OPENFST_FOUND TRUE)
 set(OPENFST_INCLUDE_DIRS ${openfst_PREFIX}/include/)
-file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/libfst*.a)
-
+file(GLOB OPENFST_LIBRARIES ${openfst_PREFIX}/lib/lib*.a ${openfst_PREFIX}/lib/fst/lib*.a)
+set(OPENFST_LIBRARIES ${OPENFST_LIBRARIES} ${OPENFST_LIBRARIES})
 # We should really install this regardless of whether galvASR is being
 # installed. Best to factor openfst out into its own
 # "ExternalProject_Add" separate from Kaldi.

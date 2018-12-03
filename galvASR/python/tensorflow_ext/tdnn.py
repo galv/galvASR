@@ -32,10 +32,7 @@ def conv1d_tdnn(features, labels, mode, params):
   logits = previous_layer
 
   if mode == tf.estimator.ModeKeys.TRAIN:
-    one_hot_labels = tf.one_hot(labels, params['num_labels'])
-    loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits)
-    # TODO: Is it best practice to scale your loss by your minibatch size?
-    loss /= batch_size_tensor
+    loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
     optimizer = tf.train.AdagradOptimizer(params['learning_rate'])
 
     return tf.estimator.EstimatorSpec(
@@ -51,4 +48,5 @@ def conv1d_tdnn(features, labels, mode, params):
     return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
   else:
     assert mode == tf.estimator.ModeKeys.EVAL
-    raise NotImplementedError()
+    loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+    return tf.estimator.EstimatorSpec(mode=mode, loss=loss)

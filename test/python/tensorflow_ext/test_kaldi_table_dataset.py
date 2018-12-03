@@ -61,3 +61,19 @@ def serialize_kaldi_text(array):
 
 
 
+def test_simple_decoder():
+  time_steps = 100
+  # This is the total number of outputs, right?
+  num_pdfs = 2032
+  shape = (1, time_steps, num_pdfs)
+  log_likelihoods_t = tf.placeholder(tf.float32, shape=shape, name="log_likelihoods")
+  # lattice = log_likelihoods_t * 2
+  lattice = kaldi_table_dataset.kaldi_simple_decoder(HCLG_fst="/export/ws15-ffs-data/dgalvez/kaldi-git/egs/mini_librispeech/s5/exp/tri3b/graph_tgsmall/HCLG.fst",
+                                                     ctx_dep="/export/ws15-ffs-data/dgalvez/kaldi-git/egs/mini_librispeech/s5/exp/nnet3/tdnn_sp/tree",
+                                                     hmm_topo="/export/ws15-ffs-data/dgalvez/kaldi-git/egs/mini_librispeech/s5/data/lang_test_tgsmall/topo",
+                                                     beam=10.0, scale=10.0,
+                                                     log_likelihoods=log_likelihoods_t)
+
+  log_likelihoods = np.log(np.random.uniform(size=shape))
+  with tf.Session() as session:
+    print(session.run(lattice, feed_dict={log_likelihoods_t: log_likelihoods}))
